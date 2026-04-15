@@ -8,7 +8,9 @@ import { projects, trajectories, courses } from './db/schema'
 
 const { upgradeWebSocket, websocket } = createBunWebSocket()
 
-const app = new Hono()
+import { importApi } from "./api";
+const app = new Hono();
+app.route("/api", importApi);
 
 app.use('*', cors())
 
@@ -47,7 +49,7 @@ async function getFullState(projectId: string) {
 }
 
 // Helper to broadcast the current state to all connected clients
-async function broadcastState(projectId: string) {
+export async function broadcastState(projectId: string) {
   const state = await getFullState(projectId)
   const message = JSON.stringify({ type: 'sync', data: state })
 
