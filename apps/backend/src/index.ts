@@ -10,9 +10,9 @@ const { upgradeWebSocket, websocket } = createBunWebSocket()
 
 import { importApi } from "./api";
 const app = new Hono();
-app.route("/api", importApi);
 
 app.use('*', cors())
+app.route("/api", importApi);
 
 // Healthcheck endpoint
 app.get('/', (c) => c.text('LTO Builder API - WebSocket Mode Active'))

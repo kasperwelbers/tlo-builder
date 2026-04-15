@@ -167,8 +167,6 @@ export async function handleImportData(data: any) {
       if (!newCourseId) { throw new Error(`Missing Course for ILO: ${i.name || "Unnamed"}. Make sure Course names match.`); }
 
       const name = i.name || "Unnamed";
-      if (iloNameMap.has(name)) throw new Error(`Duplicate ILO name found: ${name}. All ILO names must be unique.`);
-      iloNameMap.set(name, 0); // temp mark
       let isNew = i.isNew === "true" || i.isNew === "True" || i.isNew === true || i.isNew === 1;
       let derivedFromId = null;
 
@@ -176,8 +174,17 @@ export async function handleImportData(data: any) {
     }
     if (toInsert.length > 0) {
       const inserted = await db.insert(ilos).values(toInsert).returning();
+      const firstOccurrences = new Map<string, number>();
+
       for (const i of inserted) {
-        iloNameMap.set(i.name, i.id);
+        if (firstOccurrences.has(i.name)) {
+          await db.update(ilos)
+            .set({ derivedFromId: firstOccurrences.get(i.name), isNew: true })
+            .where(eq(ilos.id, i.id));
+        } else {
+          firstOccurrences.set(i.name, i.id);
+          iloNameMap.set(i.name, i.id);
+        }
       }
     }
   }
