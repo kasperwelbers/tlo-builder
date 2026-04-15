@@ -106,32 +106,39 @@ export async function handleImportData(data: any) {
   const iloNameMap = new Map<string, number>();
 
   if (data.trajectories?.length) {
+    const toInsert = [];
     for (const t of data.trajectories) {
       const name = t.name || "Unnamed";
       if (trajNameMap.has(name)) throw new Error(`Duplicate Trajectory name found: ${name}. All Trajectory names must be unique.`);
-      const [inserted] = await db.insert(trajectories).values({
-        projectId: data.projectId,
-        name: name,
-        color: t.color || null
-      }).returning();
-      trajNameMap.set(name, inserted.id);
+      trajNameMap.set(name, 0); // temp mark
+      toInsert.push({ projectId: data.projectId, name, color: t.color || null });
+    }
+    if (toInsert.length > 0) {
+      const inserted = await db.insert(trajectories).values(toInsert).returning();
+      for (const t of inserted) {
+        trajNameMap.set(t.name, t.id);
+      }
     }
   }
 
   if (data.courses?.length) {
+    const toInsert = [];
     for (const c of data.courses) {
       const name = c.name || "Unnamed";
       if (courseNameMap.has(name)) throw new Error(`Duplicate Course name found: ${name}. All Course names must be unique.`);
-      const [inserted] = await db.insert(courses).values({
-        projectId: data.projectId,
-        name: name,
-        color: c.color || null
-      }).returning();
-      courseNameMap.set(name, inserted.id);
+      courseNameMap.set(name, 0); // temp mark
+      toInsert.push({ projectId: data.projectId, name, color: c.color || null });
+    }
+    if (toInsert.length > 0) {
+      const inserted = await db.insert(courses).values(toInsert).returning();
+      for (const c of inserted) {
+        courseNameMap.set(c.name, c.id);
+      }
     }
   }
 
   if (data.ltos?.length) {
+    const toInsert = [];
     for (const l of data.ltos) {
       const tName = l.trajectory || l.trajectoryName || l.trajectory_name;
       const newTrajId = tName ? trajNameMap.get(String(tName)) : null;
@@ -140,17 +147,19 @@ export async function handleImportData(data: any) {
 
       const name = l.name || "Unnamed";
       if (ltoNameMap.has(name)) throw new Error(`Duplicate LTO name found: ${name}. All LTO names must be unique.`);
-      const [inserted] = await db.insert(ltos).values({
-        trajectoryId: newTrajId,
-        name: name,
-        outcome: l.outcome || "",
-        bloom: l.bloom || null
-      }).returning();
-      ltoNameMap.set(name, inserted.id);
+      ltoNameMap.set(name, 0); // temp mark
+      toInsert.push({ trajectoryId: newTrajId, name, outcome: l.outcome || "", bloom: l.bloom || null });
+    }
+    if (toInsert.length > 0) {
+      const inserted = await db.insert(ltos).values(toInsert).returning();
+      for (const l of inserted) {
+        ltoNameMap.set(l.name, l.id);
+      }
     }
   }
 
   if (data.ilos?.length) {
+    const toInsert = [];
     for (const i of data.ilos) {
       const cName = i.course || i.courseName || i.course_name;
       const newCourseId = cName ? courseNameMap.get(String(cName)) : null;
@@ -159,19 +168,17 @@ export async function handleImportData(data: any) {
 
       const name = i.name || "Unnamed";
       if (iloNameMap.has(name)) throw new Error(`Duplicate ILO name found: ${name}. All ILO names must be unique.`);
+      iloNameMap.set(name, 0); // temp mark
       let isNew = i.isNew === "true" || i.isNew === "True" || i.isNew === true || i.isNew === 1;
       let derivedFromId = null;
 
-      const [inserted] = await db.insert(ilos).values({
-        courseId: newCourseId,
-        name: name,
-        outcome: i.outcome || "",
-        bloom: i.bloom || null,
-        isNew,
-        derivedFromId
-      }).returning();
-
-      iloNameMap.set(name, inserted.id);
+      toInsert.push({ courseId: newCourseId, name, outcome: i.outcome || "", bloom: i.bloom || null, isNew, derivedFromId });
+    }
+    if (toInsert.length > 0) {
+      const inserted = await db.insert(ilos).values(toInsert).returning();
+      for (const i of inserted) {
+        iloNameMap.set(i.name, i.id);
+      }
     }
   }
 
