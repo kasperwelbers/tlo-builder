@@ -133,7 +133,7 @@ export async function handleImportData(data: any) {
 
   if (data.ltos?.length) {
     for (const l of data.ltos) {
-      const tName = l.trajectoryName || l.trajectory_name;
+      const tName = l.trajectory || l.trajectoryName || l.trajectory_name;
       const newTrajId = tName ? trajNameMap.get(String(tName)) : null;
 
       if (!newTrajId) { throw new Error(`Missing Trajectory for LTO: ${l.name || "Unnamed"}. Make sure Trajectory names match.`); }
@@ -152,7 +152,7 @@ export async function handleImportData(data: any) {
 
   if (data.ilos?.length) {
     for (const i of data.ilos) {
-      const cName = i.courseName || i.course_name;
+      const cName = i.course || i.courseName || i.course_name;
       const newCourseId = cName ? courseNameMap.get(String(cName)) : null;
 
       if (!newCourseId) { throw new Error(`Missing Course for ILO: ${i.name || "Unnamed"}. Make sure Course names match.`); }
@@ -177,10 +177,10 @@ export async function handleImportData(data: any) {
 
   if (data.mappings?.length) {
     const parsedMappings = data.mappings.map((m: any) => {
-      const lName = m.ltoName || m.lto_name;
+      const lName = m.tlo || m.lto || m.ltoName || m.lto_name;
       const newLtoId = lName ? ltoNameMap.get(String(lName)) : null;
 
-      const iName = m.iloName || m.ilo_name || m.itoName || m.ito_name;
+      const iName = m.ilo || m.iloName || m.ilo_name || m.itoName || m.ito_name;
       const newIloId = iName ? iloNameMap.get(String(iName)) : null;
 
       return { ltoId: newLtoId, iloId: newIloId };
