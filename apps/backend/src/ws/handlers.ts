@@ -186,8 +186,14 @@ export async function handleImportData(data: any) {
       return { ltoId: newLtoId, iloId: newIloId };
     }).filter((m: any) => m.ltoId && m.iloId);
 
-    if (parsedMappings.length > 0) {
-      await db.insert(mappings).values(parsedMappings).onConflictDoNothing();
+    const uniqueMappings = Array.from(new Set(parsedMappings.map((m: any) => `${m.ltoId}-${m.iloId}`)))
+      .map((str: any) => {
+        const [ltoId, iloId] = str.split('-');
+        return { ltoId: Number(ltoId), iloId: Number(iloId) };
+      });
+
+    if (uniqueMappings.length > 0) {
+      await db.insert(mappings).values(uniqueMappings).onConflictDoNothing();
     }
   }
 }
