@@ -5,8 +5,7 @@
     "dev": "bun run --watch src/index.ts",
     "build": "tsc",
     "start": "bun run src/index.ts",
-    "db:push": "drizzle-kit push",
-    "db:seed": "bun run src/db/seed.ts"
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@lto/shared": "workspace:^",

@@ -224,7 +224,7 @@ export async function handleMessage(data: any) {
     case "add_ilo": return handleAddIlo(data);
     case "update_ilo": return handleUpdateIlo(data);
     case "remove_ilo": return handleRemoveIlo(data);
-    case "import_data": return handleImportData(data);
+    case "clear_data": return handleImportData(data);
     default:
       console.warn("Unknown message type:", data.type);
   }
