@@ -7,7 +7,10 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "turbo format",
-    "typecheck": "turbo typecheck"
+    "typecheck": "turbo typecheck",
+    "db:push": "pnpm --filter backend run db:push",
+    "db:seed": "pnpm --filter backend run db:seed",
+    "db:reset": "rm -f apps/backend/sqlite.db && pnpm run db:push && pnpm run db:seed"
   },
   "devDependencies": {
     "prettier": "^3.8.1",

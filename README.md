@@ -1,21 +1,29 @@
-# shadcn/ui monorepo template
+# LTO Builder
 
-This is a Vite monorepo template with shadcn/ui.
+A monorepo tool for mapping Learning Trajectory Outcomes (LTOs) and Intended Learning Outcomes (ITOs) to improve curriculum alignment.
 
-## Adding components
+## Tech Stack
+- **Frontend:** React, Vite, Tailwind CSS (v4)
+- **Backend:** Hono, Node.js
+- **Database:** SQLite via Drizzle ORM
+- **Shared:** Zod for shared validation schemas
 
-To add components to your app, run the following command at the root of your `web` app:
+## Getting Started
 
-```bash
-pnpm dlx shadcn@latest add button -c apps/web
-```
+1. Set up a SQLite database and provide the connection URL as `DATABASE_URL` in the environment if not using the default `sqlite.db`.
 
-This will place the ui components in the `packages/ui/src/components` directory.
+2. Push the schema to the database:
+   ```bash
+   cd apps/backend
+   npm run db:push
+   ```
 
-## Using components
+3. Seed the database with some example data:
+   ```bash
+   npm run db:seed
+   ```
 
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
-```
+4. Start the development server from the root of the project:
+   ```bash
+   npm run dev
+   ```
