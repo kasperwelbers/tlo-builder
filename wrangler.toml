@@ -1,0 +1,24 @@
+name = "lto-builder"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lto-builder"
+database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+migrations_dir = "./migrations"
+
+[[durable_objects.bindings]]
+name = "PROJECT_ROOM"
+class_name = "ProjectRoom"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ProjectRoom"]
+
+# Assets are only served in production (after pnpm build)
+[env.production.assets]
+directory = "./dist"
+
+[dev]
+port = 8787

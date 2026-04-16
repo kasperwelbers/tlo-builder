@@ -3,22 +3,47 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "turbo build",
-    "dev": "turbo dev",
-    "lint": "turbo lint",
-    "format": "turbo format",
-    "typecheck": "turbo typecheck",
-    "db:push": "pnpm --filter backend run db:push",
-    "db:seed": "pnpm --filter backend run db:seed",
-    "db:reset": "rm -f apps/backend/sqlite.db && pnpm run db:push && pnpm run db:seed"
+    "dev": "concurrently -n worker,vite -c blue,green \"wrangler dev\" \"vite\"",
+    "build": "vite build",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply lto-builder --local",
+    "deploy": "pnpm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.14",
+    "js-yaml": "^4.1.1",
+    "jszip": "^3.10.1",
+    "lucide-react": "^1.8.0",
+    "next-themes": "^0.4.6",
+    "papaparse": "^5.5.3",
+    "radix-ui": "^1.4.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/jszip": "^3.4.1",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "drizzle-kit": "^0.31.10",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
-    "turbo": "^2.8.17",
-    "typescript": "5.9.3"
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.0.0",
+    "wrangler": "^4.0.0"
   },
-  "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=20"
   }

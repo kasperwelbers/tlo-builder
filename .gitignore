@@ -1,7 +1,11 @@
 # Dependencies
 node_modules
-.pnp
-.pnp.js
+
+# Build output
+dist
+
+# Wrangler local state (D1, DO emulation)
+.wrangler
 
 # Local env files
 .env
@@ -10,23 +14,7 @@ node_modules
 .env.test.local
 .env.production.local
 
-# Testing
-coverage
-
-# Turbo
-.turbo
-
-# Vercel
-.vercel
-
-# Build Outputs
-dist
-
-# Debug
-npm-debug.log*
-
 # Misc
 .DS_Store
 *.pem
-
-data/*
+npm-debug.log*
