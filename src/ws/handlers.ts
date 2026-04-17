@@ -62,14 +62,14 @@ async function deleteTlo(db: DB, data: any) {
 
 async function addIlo(db: DB, data: any) {
   await db.insert(ilos).values({
-    projectId: data.projectId, name: data.name, tloId: data.tloId ?? null,
+    projectId: data.projectId, tloId: data.tloId ?? null,
     description: data.description ?? '', bloomLevel: data.bloomLevel ?? null,
   })
 }
 
 async function updateIlo(db: DB, data: any) {
   await db.update(ilos).set({
-    name: data.name, description: data.description, bloomLevel: data.bloomLevel ?? null,
+    description: data.description, bloomLevel: data.bloomLevel ?? null,
     ...(data.tloId !== undefined ? { tloId: data.tloId } : {})
   }).where(eq(ilos.id, data.id))
 }
@@ -115,13 +115,13 @@ async function deleteCourse(db: DB, data: any) {
 async function addCourseObjective(db: DB, data: any) {
   await db.insert(courseObjectives).values({
     projectId: data.projectId, courseId: data.courseId,
-    name: data.name, description: data.description ?? '',
+    description: data.description ?? '',
   })
 }
 
 async function updateCourseObjective(db: DB, data: any) {
   await db.update(courseObjectives).set({
-    courseId: data.courseId, name: data.name, description: data.description,
+    courseId: data.courseId, description: data.description,
   }).where(eq(courseObjectives.id, data.id))
 }
 
@@ -209,7 +209,7 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
 
 export async function addIloWithLinks(db: DB, data: any): Promise<SyncTable[]> {
   const [newIlo] = await db.insert(ilos).values({
-    projectId: data.projectId, name: data.name, tloId: data.tloId ?? null,
+    projectId: data.projectId, tloId: data.tloId ?? null,
     description: data.description ?? '', bloomLevel: data.bloomLevel ?? null,
   }).returning()
 
@@ -258,8 +258,8 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     const courseId = courseNameToId.get(co.course)
     if (courseId === undefined) continue
     const [inserted] = await db.insert(courseObjectives)
-      .values({ projectId, courseId, name: co.name, description: co.description ?? '' }).returning()
-    coMap.set(`${co.course}::${co.name}`, inserted.id)
+      .values({ projectId, courseId, description: co.description ?? '' }).returning()
+    coMap.set(`${co.course}::${co.description}`, inserted.id)
   }
 
   for (const traj of payload.trajectories ?? []) {
@@ -271,14 +271,14 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
       }).returning()
       for (const iloData of tloData.ilos ?? []) {
         const [newIlo] = await db.insert(ilos).values({
-          projectId, name: iloData.name, tloId: newTlo.id,
+          projectId, tloId: newTlo.id,
           description: iloData.description ?? '', bloomLevel: iloData.bloom_level ?? null,
         }).returning()
         for (const coRef of iloData.course_objectives ?? []) {
           const courseId = courseNameToId.get(coRef.course)
           if (courseId !== undefined) {
-            if (coRef.name) {
-              const coId = coMap.get(`${coRef.course}::${coRef.name}`)
+            if (coRef.description) {
+              const coId = coMap.get(`${coRef.course}::${coRef.description}`)
               if (coId !== undefined) {
                 await db.insert(iloCourseObjectiveMappings)
                   .values({ iloId: newIlo.id, courseId, courseObjectiveId: coId, projectId }).onConflictDoNothing()

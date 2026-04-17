@@ -32,10 +32,9 @@ export function CsvActions({ courseObjectives }: Props) {
       let count = 0
       for (const row of rows) {
         const course = row['course']?.trim()
-        const name = row['name']?.trim()
         const description = row['description']?.trim() ?? ''
-        if (!course || !name) continue
-        send({ type: 'course_objective:add', course, name, description })
+        if (!course || !description) continue
+        send({ type: 'course_objective:add', course, description })
         count++
       }
       toast.success(`Imported ${count} course objective${count !== 1 ? 's' : ''}`)

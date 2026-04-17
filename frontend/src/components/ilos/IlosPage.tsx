@@ -28,7 +28,7 @@ export function IlosPage() {
     send({ type: 'ilo:delete', id: ilo.id })
   }
 
-  function handleSubmit(data: { name: string; description: string; bloomLevel: string | null }) {
+  function handleSubmit(data: { description: string; bloomLevel: string | null }) {
     if (editingIlo?.id) {
       send({ type: 'ilo:update', id: editingIlo.id, ...data })
     } else {

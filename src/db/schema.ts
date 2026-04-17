@@ -40,7 +40,6 @@ export const ilos = sqliteTable("ilos", {
   id:          integer("id").primaryKey({ autoIncrement: true }),
   projectId:   text("project_id").references(() => projects.id).notNull(),
   tloId:       integer("tlo_id").references(() => tlos.id),
-  name:        text("name").notNull(),
   description: text("description").notNull().default(""),
   bloomLevel:  text("bloom_level"),
 })
@@ -49,7 +48,6 @@ export const courseObjectives = sqliteTable("course_objectives", {
   id:          integer("id").primaryKey({ autoIncrement: true }),
   projectId:   text("project_id").references(() => projects.id).notNull(),
   courseId:    integer("course_id").references(() => courses.id).notNull(),
-  name:        text("name").notNull(),
   description: text("description").notNull().default(""),
 })
 

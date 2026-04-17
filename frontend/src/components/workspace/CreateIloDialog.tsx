@@ -18,33 +18,19 @@ interface CreateIloDialogProps {
   courseObjectives: CourseObjective[]
 }
 
-type Step = 'browse' | 'form'
 
-interface FormState {
-  name: string
-  description: string
-  bloomLevel: string
-}
 
 export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: CreateIloDialogProps) {
   const { send, state } = useApp()
   const courseById = new Map(state.courses.map(c => [c.id, c]))
-  const [step, setStep] = useState<Step>('browse')
   const [search, setSearch] = useState('')
   const [courseFilter, setCourseFilter] = useState<string>('all')
-  const [linkedCo, setLinkedCo] = useState<CourseObjective | null>(null)
-  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null)
-  const [form, setForm] = useState<FormState>({ name: '', description: '', bloomLevel: '' })
 
   // Reset when dialog closes
   useEffect(() => {
     if (!open) {
-      setStep('browse')
       setSearch('')
       setCourseFilter('all')
-      setLinkedCo(null)
-      setSelectedCourseId(null)
-      setForm({ name: '', description: '', bloomLevel: '' })
     }
   }, [open])
 
@@ -57,27 +43,14 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
     return matchesCourse && matchesSearch
   })
 
-  function handleCopy(co: CourseObjective) {
-    setLinkedCo(co)
-    setForm({ name: co.name, description: co.description, bloomLevel: '' })
-    setStep('form')
-  }
-
-  function handleBlank() {
-    setLinkedCo(null)
-    setForm({ name: '', description: '', bloomLevel: '' })
-    setStep('form')
-  }
-
-  function handleSubmit() {
-    if (!form.name.trim()) return
+  function handleCreateFromCo(co: CourseObjective) {
     send({
       type: 'ilo:create',
       tloId: tlo.id,
-      name: form.name.trim(),
-      description: form.description.trim(),
-      bloomLevel: form.bloomLevel || null,
-      ...(linkedCo ? { courseObjectiveId: linkedCo.id, courseId: linkedCo.courseId } : selectedCourseId ? { courseId: selectedCourseId } : {}),
+      description: co.description,
+      bloomLevel: null,
+      courseObjectiveId: co.id,
+      courseId: co.courseId,
     })
     onOpenChange(false)
   }
@@ -87,16 +60,15 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base">
-            {step === 'browse' ? 'Create ILO' : 'New ILO'}
+            Create ILO from Course Objective
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
             For TLO: <span className="font-medium text-foreground">{tlo.name}</span>
           </p>
         </DialogHeader>
 
-        {step === 'browse' ? (
-          <>
-            {/* Search */}
+        <>
+          {/* Search */}
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
@@ -152,15 +124,12 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground">{courseById.get(co.courseId)?.name ?? ""}</p>
-                      <p className="text-sm font-medium leading-tight">{co.name}</p>
-                      {co.description && (
-                        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                          {co.description}
-                        </p>
-                      )}
+                      <p className="mt-0.5 line-clamp-2 text-sm text-foreground">
+                        {co.description}
+                      </p>
                     </div>
-                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleCopy(co)}>
-                      Copy →
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => handleCreateFromCo(co)}>
+                      Create ILO →
                     </Button>
                   </div>
                 ))
@@ -168,80 +137,11 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
             </div>
 
             <DialogFooter>
-              <Button variant="ghost" onClick={handleBlank}>
-                <Plus className="mr-1.5 size-4" /> Create blank ILO
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
               </Button>
             </DialogFooter>
-          </>
-        ) : (
-          <>
-            {/* Linked CO banner */}
-            {linkedCo ? (
-              <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
-                <span className="text-muted-foreground">📎 Based on:</span>
-                <span className="font-medium">{linkedCo.name}</span>
-                <button
-                  className="ml-auto text-muted-foreground hover:text-foreground"
-                  onClick={() => setLinkedCo(null)}
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                <Label>Link to Course (Optional)</Label>
-                <Select
-                  value={selectedCourseId?.toString() || "none"}
-                  onValueChange={v => setSelectedCourseId(v === "none" ? null : parseInt(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a course..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {state.courses.map(c => (
-                      <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Name</Label>
-                <Input
-                  value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="ILO name"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Description</Label>
-                <Textarea
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="Describe what students will be able to do…"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Bloom level</Label>
-                <BloomSelect value={form.bloomLevel} onValueChange={v => setForm(f => ({ ...f, bloomLevel: v }))} />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2">
-              <Button variant="ghost" onClick={() => setStep('browse')}>
-                <ArrowLeft className="mr-1.5 size-4" /> Back
-              </Button>
-              <Button onClick={handleSubmit} disabled={!form.name.trim()}>
-                Create ILO
-              </Button>
-            </DialogFooter>
-          </>
-        )}
+        </>
       </DialogContent>
     </Dialog>
   )

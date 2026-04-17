@@ -18,7 +18,7 @@ interface Props {
   onOpenChange: (open: boolean) => void
   courses: Course[]
   initialData?: Partial<CourseObjective>
-  onSubmit: (data: { courseId: number; name: string; description: string }) => void
+  onSubmit: (data: { courseId: number; description: string }) => void
 }
 
 export function CourseObjectiveFormDialog({
@@ -29,21 +29,19 @@ export function CourseObjectiveFormDialog({
   onSubmit,
 }: Props) {
   const [courseId, setCourseId] = useState('')
-  const [name, setName] = useState('')
   const [description, setDescription] = useState('')
 
   useEffect(() => {
     if (open) {
       setCourseId(initialData?.courseId?.toString() ?? '')
-      setName(initialData?.name ?? '')
       setDescription(initialData?.description ?? '')
     }
   }, [open, initialData])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!courseId || !name.trim()) return
-    onSubmit({ courseId: Number(courseId), name: name.trim(), description: description.trim() })
+    if (!courseId || !description.trim()) return
+    onSubmit({ courseId: Number(courseId), description: description.trim() })
     onOpenChange(false)
   }
 
@@ -68,17 +66,6 @@ export function CourseObjectiveFormDialog({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="co-name">Name</Label>
-            <Input
-              id="co-name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Objective name"
-              required
-              autoFocus
-            />
-          </div>
-          <div className="space-y-1.5">
             <Label htmlFor="co-description">Description</Label>
             <Textarea
               id="co-description"
@@ -86,6 +73,8 @@ export function CourseObjectiveFormDialog({
               onChange={e => setDescription(e.target.value)}
               placeholder="Description"
               rows={3}
+              required
+              autoFocus
             />
           </div>
           <DialogFooter>

@@ -72,7 +72,7 @@ export function TloIloPanel() {
                           key={ilo!.id}
                           className="flex items-center gap-2 text-sm"
                         >
-                          <span className="flex-1 truncate">{ilo!.name}</span>
+                          <span className="flex-1 truncate">{ilo.description}</span>
                           <Button
                             variant="ghost"
                             size="icon-xs"
@@ -105,7 +105,7 @@ export function TloIloPanel() {
                               ) : (
                                 unmappedIlos.map(ilo => (
                                   <SelectItem key={ilo.id} value={String(ilo.id)}>
-                                    {ilo.name}
+                                    {ilo.description}
                                   </SelectItem>
                                 ))
                               )}

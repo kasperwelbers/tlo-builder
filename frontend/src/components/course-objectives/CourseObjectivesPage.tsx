@@ -48,7 +48,7 @@ export function CourseObjectivesPage() {
     setNewCourseDescription('')
   }
 
-  function handleCoSubmit(data: { courseId: number; name: string; description: string }) {
+  function handleSubmit(data: { courseId: number; description: string }) {
     if (editingCo?.id) {
       send({ type: 'course_objective:update', id: editingCo.id, ...data })
     } else {
@@ -167,7 +167,7 @@ export function CourseObjectivesPage() {
         }}
         courses={sortedCourses}
         initialData={editingCo}
-        onSubmit={handleCoSubmit}
+        onSubmit={handleSubmit}
       />
     </div>
   )

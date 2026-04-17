@@ -34,10 +34,7 @@ export function IloCard({ ilo, onEdit, onDelete }: Props) {
       <CardContent className="px-4">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{ilo.name}</p>
-            {ilo.description && (
-              <p className="mt-0.5 truncate text-sm text-muted-foreground">{ilo.description}</p>
-            )}
+            <p className="truncate text-sm">{ilo.description || <span className="italic opacity-50">No description</span>}</p>
             {ilo.bloomLevel && (
               <Badge className={`mt-1.5 ${bloomBadgeClass(ilo.bloomLevel)}`} variant="outline">
                 {ilo.bloomLevel}
@@ -71,7 +68,7 @@ export function IloCard({ ilo, onEdit, onDelete }: Props) {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete <strong>{ilo.name}</strong> and all its mappings.
+                  This will permanently delete this ILO and all its mappings.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

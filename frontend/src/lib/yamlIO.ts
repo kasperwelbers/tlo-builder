@@ -51,7 +51,7 @@ export function exportToYaml(state: AppState): void {
           .map(ilo => {
             const coRefs = iloCoMap.get(ilo.id)
             const entry: Record<string, unknown> = {
-              name: ilo.name, description: ilo.description, bloom_level: ilo.bloomLevel ?? null,
+              description: ilo.description, bloom_level: ilo.bloomLevel ?? null,
             }
             if (coRefs?.length) entry.course_objectives = coRefs
             return entry

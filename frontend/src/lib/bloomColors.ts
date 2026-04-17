@@ -5,7 +5,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   P: 'bg-amber-50 text-amber-700 border-amber-300',
 }
 
+const CATEGORY_BG_COLORS: Record<string, string> = {
+  C: 'bg-blue-50 text-black',
+  A: 'bg-green-50 text-black',
+  P: 'bg-amber-50 text-black',
+}
+
 export function bloomBadgeClass(code: string | null): string {
   if (!code) return ''
   return CATEGORY_COLORS[code[0]] ?? 'bg-muted text-muted-foreground'
+}
+
+export function bloomBgClass(code: string | null): string {
+  if (!code) return 'bg-muted text-black'
+  return CATEGORY_BG_COLORS[code[0]] ?? 'bg-muted text-black'
 }

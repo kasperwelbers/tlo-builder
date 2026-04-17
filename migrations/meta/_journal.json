@@ -22,6 +22,13 @@
       "when": 1776407878201,
       "tag": "0002_slim_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1776412062406,
+      "tag": "0003_far_warbird",
+      "breakpoints": true
     }
   ]
 }

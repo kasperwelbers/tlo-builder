@@ -71,7 +71,7 @@ export function IloCourseObjectivePanel() {
                     <div className="mt-2 space-y-1 pl-3">
                       {mappedIlos.map(ilo => (
                         <div key={ilo!.id} className="flex items-center gap-2 text-sm">
-                          <span className="flex-1 truncate">{ilo!.name}</span>
+                          <span className="flex-1 truncate">{ilo!.description}</span>
                           <Button
                             variant="ghost"
                             size="icon-xs"
@@ -104,7 +104,7 @@ export function IloCourseObjectivePanel() {
                               ) : (
                                 availableIlos.map(ilo => (
                                   <SelectItem key={ilo.id} value={String(ilo.id)}>
-                                    {ilo.name}
+                                    {ilo.description}
                                   </SelectItem>
                                 ))
                               )}

@@ -13,10 +13,12 @@ interface BloomSelectProps {
   value: string
   onValueChange: (value: string) => void
   placeholder?: string
+  fullLabel: boolean
 }
 
-export function BloomSelect({ value, onValueChange, placeholder = "—" }: BloomSelectProps) {
+export function BloomSelect({ value, onValueChange, placeholder = "—" , fullLabel}: BloomSelectProps) {
   const selected = BLOOM_LEVELS.find(l => l.code === value)
+  const label = fullLabel ? selected?.code + ' - ' + selected?.name   : selected?.code
 
   return (
     <DropdownMenu>
@@ -24,7 +26,8 @@ export function BloomSelect({ value, onValueChange, placeholder = "—" }: Bloom
         <button
           type="button"
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ring-offset-background transition-colors",
+            `${fullLabel ? "px-3 py-2" : "size-8"}`,
+            "flex shrink-0 items-center justify-center rounded-full border text-xs font-semibold ring-offset-background transition-colors",
             "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
             "disabled:cursor-not-allowed disabled:opacity-50",
             selected
@@ -32,7 +35,7 @@ export function BloomSelect({ value, onValueChange, placeholder = "—" }: Bloom
               : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           )}
         >
-          {selected ? selected.code : placeholder}
+          {selected ? label : placeholder}
         </button>
       </DropdownMenuTrigger>
 

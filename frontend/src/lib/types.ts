@@ -11,7 +11,6 @@ export interface Ilo {
   id: number
   projectId: string
   tloId: number | null
-  name: string
   description: string
   bloomLevel: string | null
 }
@@ -20,7 +19,6 @@ export interface CourseObjective {
   id: number
   projectId: string
   courseId: number
-  name: string
   description: string
 }
 

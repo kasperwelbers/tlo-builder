@@ -17,7 +17,6 @@ interface Props {
   courses?: Course[]
   courseObjectives?: CourseObjective[]
   onSubmit: (data: {
-    name: string
     description: string
     bloomLevel: string | null
     courseObjectiveIds: number[]
@@ -27,14 +26,12 @@ interface Props {
 export function IloFormDialog({
   open, onOpenChange, initialData, initialCoIds = [], courses = [], courseObjectives = [], onSubmit,
 }: Props) {
-  const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [bloomLevel, setBloomLevel] = useState('')
   const [selectedCoIds, setSelectedCoIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (open) {
-      setName(initialData?.name ?? '')
       setDescription(initialData?.description ?? '')
       setBloomLevel(initialData?.bloomLevel ?? '')
       setSelectedCoIds(new Set(initialCoIds))
@@ -51,9 +48,8 @@ export function IloFormDialog({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim()) return
+    if (!description.trim()) return
     onSubmit({
-      name: name.trim(),
       description: description.trim(),
       bloomLevel: bloomLevel || null,
       courseObjectiveIds: Array.from(selectedCoIds),
@@ -78,12 +74,8 @@ export function IloFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Name</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="ILO name" required autoFocus />
-          </div>
-          <div className="space-y-1.5">
             <Label>Description</Label>
-            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" rows={3} />
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" rows={3} required autoFocus />
           </div>
           <div className="space-y-1.5">
             <Label>Bloom Level</Label>

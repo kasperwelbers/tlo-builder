@@ -27,10 +27,10 @@ interface IloItemProps {
 
 export function IloItem({ ilo, onDelete }: IloItemProps) {
   const { state, send } = useApp()
-  const [editingField, setEditingField] = useState<'name' | 'description' | null>(null)
+  const [editingField, setEditingField] = useState<'description' | null>(null)
   const [editValue, setEditValue] = useState('')
 
-  const handleStartEdit = (field: 'name' | 'description', value: string) => {
+  const handleStartEdit = (field: 'description', value: string) => {
     setEditingField(field)
     setEditValue(value)
   }
@@ -39,14 +39,12 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
     if (!editingField) return
 
     const isUnchanged =
-      (editingField === 'name' && editValue === ilo.name) ||
       (editingField === 'description' && editValue === (ilo.description || ''))
 
     if (!isUnchanged) {
       send({
         type: "ilo:update",
         id: ilo.id,
-        name: editingField === 'name' ? editValue : ilo.name,
         description: editingField === 'description' ? editValue : ilo.description,
         bloomLevel: ilo.bloomLevel,
         tloId: ilo.tloId
@@ -59,7 +57,6 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
     send({
       type: "ilo:update",
       id: ilo.id,
-      name: ilo.name,
       description: ilo.description,
       bloomLevel: val,
       tloId: ilo.tloId
@@ -84,7 +81,7 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
       </div>
 
       <div className="flex-1 flex flex-col min-w-[200px] justify-center">
-        {editingField === 'name' ? (
+        {editingField === 'description' ? (
           <Input
             value={editValue}
             onChange={e => setEditValue(e.target.value)}
@@ -95,25 +92,9 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
           />
         ) : (
           <div
+            role="button"
+            tabIndex={0}
             className="h-5 font-medium cursor-pointer px-1.5 py-0.5 rounded hover:bg-muted truncate"
-            onClick={() => handleStartEdit('name', ilo.name)}
-          >
-            {ilo.name}
-          </div>
-        )}
-
-        {editingField === 'description' ? (
-          <Input
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            className="h-5 text-xs text-muted-foreground w-full"
-            autoFocus
-            onBlur={handleSave}
-            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingField(null); }}
-          />
-        ) : (
-          <div
-            className="h-5 text-xs text-muted-foreground cursor-pointer px-1.5 py-0.5 rounded hover:bg-muted truncate"
             onClick={() => handleStartEdit('description', ilo.description || '')}
           >
             {ilo.description || <span className="italic opacity-50">No description</span>}
@@ -216,7 +197,7 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently delete <strong>{ilo.name}</strong> and remove all its mappings.
+                This will permanently delete this ILO and remove all its mappings.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
