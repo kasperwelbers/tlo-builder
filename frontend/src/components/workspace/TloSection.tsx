@@ -31,11 +31,6 @@ export function TloSection({
   const [createOpen, setCreateOpen] = useState(false)
   const [editIlo, setEditIlo] = useState<Ilo | null>(null)
 
-  function getLinkedCo(iloId: number) {
-    const mapping = iloCourseObjectiveMappings.find(m => m.iloId === iloId)
-    return mapping ? courseObjectives.find(co => co.id === mapping.courseObjectiveId) : undefined
-  }
-
   return (
     <div className="rounded-lg border bg-card">
       {/* TLO header */}
@@ -84,22 +79,13 @@ export function TloSection({
         <>
           <Separator />
           <div className="py-1">
-            {ilos.map(ilo => {
-              const linkedCo = getLinkedCo(ilo.id)
-              return (
-                <IloItem
-                  key={ilo.id}
-                  ilo={ilo}
-                  linkedCo={linkedCo}
-                  linkedCourseName={linkedCo ? (courseById.get(linkedCo.courseId)?.name ?? '') : undefined}
-                  onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
-                  onUnlinkCo={() => {
-                    const m = iloCourseObjectiveMappings.find(m => m.iloId === ilo.id)
-                    if (m) send({ type: "ilo_course_objective_mapping:delete", iloId: ilo.id, courseObjectiveId: m.courseObjectiveId })
-                  }}
-                />
-              )
-            })}
+            {ilos.map(ilo => (
+              <IloItem
+                key={ilo.id}
+                ilo={ilo}
+                onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
+              />
+            ))}
           </div>
         </>
       )}

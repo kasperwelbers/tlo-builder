@@ -35,6 +35,7 @@ export class ProjectRoom extends DurableObject<Env> {
     try {
       const data = JSON.parse(typeof message === 'string' ? message : new TextDecoder().decode(message))
       data.projectId = projectId
+      console.log(projectId)
 
       const db = getDb(this.env.DB)
       const affectedTables = await handleMessage(db, data)
@@ -44,12 +45,16 @@ export class ProjectRoom extends DurableObject<Env> {
         await this.broadcastTable(projectId, table)
       }
     } catch (error: any) {
-      ws.send(JSON.stringify({ type: 'error', message: error?.message ?? 'Unknown error' }))
+      try {
+        ws.send(JSON.stringify({ type: 'sync:error', message: error?.message ?? 'Unknown error' }))
+      } catch (e) {}
     }
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
-    ws.close(code, reason)
+    try {
+      ws.close(code, reason)
+    } catch (e) {}
   }
 
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {

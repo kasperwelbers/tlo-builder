@@ -1,6 +1,6 @@
 import { type DB } from '../db'
 import { trajectories, courses, tlos, ilos, courseObjectives, iloCourseObjectiveMappings } from '../db/schema'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 
 export type SyncTable =
   | 'trajectories' | 'courses' | 'tlos' | 'ilos'
@@ -133,15 +133,38 @@ async function deleteCourseObjective(db: DB, data: any) {
 // ── Mappings ──────────────────────────────────────────────────────────────────
 
 async function addIloCourseObjectiveMapping(db: DB, data: any) {
+  let courseId = data.courseId
+  if (!courseId && data.courseObjectiveId) {
+    const [co] = await db.select({ courseId: courseObjectives.courseId }).from(courseObjectives).where(eq(courseObjectives.id, data.courseObjectiveId))
+    if (co) courseId = co.courseId
+  }
+  if (!courseId) return
+
   await db.insert(iloCourseObjectiveMappings).values({
-    iloId: data.iloId, courseObjectiveId: data.courseObjectiveId, projectId: data.projectId,
+    iloId: data.iloId, courseId, courseObjectiveId: data.courseObjectiveId ?? null, projectId: data.projectId,
   }).onConflictDoNothing()
 }
 
 async function deleteIloCourseObjectiveMapping(db: DB, data: any) {
-  await db.delete(iloCourseObjectiveMappings).where(
-    and(eq(iloCourseObjectiveMappings.iloId, data.iloId),
-        eq(iloCourseObjectiveMappings.courseObjectiveId, data.courseObjectiveId)))
+  let courseId = data.courseId
+  if (!courseId && data.courseObjectiveId) {
+    const [co] = await db.select({ courseId: courseObjectives.courseId }).from(courseObjectives).where(eq(courseObjectives.id, data.courseObjectiveId))
+    if (co) courseId = co.courseId
+  }
+
+  const conditions = [
+    eq(iloCourseObjectiveMappings.iloId, data.iloId)
+  ]
+  if (courseId) conditions.push(eq(iloCourseObjectiveMappings.courseId, courseId))
+
+  if (data.courseObjectiveId !== undefined) {
+    conditions.push(
+      data.courseObjectiveId === null
+        ? isNull(iloCourseObjectiveMappings.courseObjectiveId)
+        : eq(iloCourseObjectiveMappings.courseObjectiveId, data.courseObjectiveId)
+    )
+  }
+  await db.delete(iloCourseObjectiveMappings).where(and(...conditions))
 }
 
 // ── Dispatcher ────────────────────────────────────────────────────────────────
@@ -191,9 +214,15 @@ export async function addIloWithLinks(db: DB, data: any): Promise<SyncTable[]> {
   }).returning()
 
   const tables: SyncTable[] = ['ilos']
-  if (data.courseObjectiveId) {
+  let courseId = data.courseId
+  if (!courseId && data.courseObjectiveId) {
+    const [co] = await db.select({ courseId: courseObjectives.courseId }).from(courseObjectives).where(eq(courseObjectives.id, data.courseObjectiveId))
+    if (co) courseId = co.courseId
+  }
+
+  if (courseId) {
     await db.insert(iloCourseObjectiveMappings).values({
-      iloId: newIlo.id, courseObjectiveId: data.courseObjectiveId, projectId: data.projectId,
+      iloId: newIlo.id, courseId, courseObjectiveId: data.courseObjectiveId ?? null, projectId: data.projectId,
     }).onConflictDoNothing()
     tables.push('ilo_course_objective_mappings')
   }
@@ -246,10 +275,19 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
           description: iloData.description ?? '', bloomLevel: iloData.bloom_level ?? null,
         }).returning()
         for (const coRef of iloData.course_objectives ?? []) {
-          const coId = coMap.get(`${coRef.course}::${coRef.name}`)
-          if (coId !== undefined)
-            await db.insert(iloCourseObjectiveMappings)
-              .values({ iloId: newIlo.id, courseObjectiveId: coId, projectId }).onConflictDoNothing()
+          const courseId = courseNameToId.get(coRef.course)
+          if (courseId !== undefined) {
+            if (coRef.name) {
+              const coId = coMap.get(`${coRef.course}::${coRef.name}`)
+              if (coId !== undefined) {
+                await db.insert(iloCourseObjectiveMappings)
+                  .values({ iloId: newIlo.id, courseId, courseObjectiveId: coId, projectId }).onConflictDoNothing()
+              }
+            } else {
+              await db.insert(iloCourseObjectiveMappings)
+                .values({ iloId: newIlo.id, courseId, courseObjectiveId: null, projectId }).onConflictDoNothing()
+            }
+          }
         }
       }
     }

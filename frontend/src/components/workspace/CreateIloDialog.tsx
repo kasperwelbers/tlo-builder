@@ -3,6 +3,7 @@ import { Search, X, ArrowLeft, Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { BloomSelect } from '@/components/ui/bloom-select'
@@ -32,6 +33,7 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
   const [search, setSearch] = useState('')
   const [courseFilter, setCourseFilter] = useState<string>('all')
   const [linkedCo, setLinkedCo] = useState<CourseObjective | null>(null)
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null)
   const [form, setForm] = useState<FormState>({ name: '', description: '', bloomLevel: '' })
 
   // Reset when dialog closes
@@ -41,6 +43,7 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
       setSearch('')
       setCourseFilter('all')
       setLinkedCo(null)
+      setSelectedCourseId(null)
       setForm({ name: '', description: '', bloomLevel: '' })
     }
   }, [open])
@@ -74,7 +77,7 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
       name: form.name.trim(),
       description: form.description.trim(),
       bloomLevel: form.bloomLevel || null,
-      ...(linkedCo ? { courseObjectiveId: linkedCo.id } : {}),
+      ...(linkedCo ? { courseObjectiveId: linkedCo.id, courseId: linkedCo.courseId } : selectedCourseId ? { courseId: selectedCourseId } : {}),
     })
     onOpenChange(false)
   }
@@ -173,7 +176,7 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
         ) : (
           <>
             {/* Linked CO banner */}
-            {linkedCo && (
+            {linkedCo ? (
               <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
                 <span className="text-muted-foreground">📎 Based on:</span>
                 <span className="font-medium">{linkedCo.name}</span>
@@ -183,6 +186,24 @@ export function CreateIloDialog({ open, onOpenChange, tlo, courseObjectives }: C
                 >
                   <X className="size-4" />
                 </button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Link to Course (Optional)</Label>
+                <Select
+                  value={selectedCourseId?.toString() || "none"}
+                  onValueChange={v => setSelectedCourseId(v === "none" ? null : parseInt(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a course..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {state.courses.map(c => (
+                      <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

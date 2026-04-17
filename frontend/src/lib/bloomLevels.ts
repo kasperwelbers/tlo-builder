@@ -88,7 +88,7 @@ export const BLOOM_LEVELS: BloomLevel[] = [
 export const BLOOM_BY_CODE = Object.fromEntries(BLOOM_LEVELS.map(l => [l.code, l]))
 
 export const BLOOM_CATEGORIES = [
-  { key: 'cognitive'   as const, label: 'Cognitive (Anderson & Krathwohl, 2001)' },
-  { key: 'affective'   as const, label: 'Affective (Krathwohl et al., 1964)'     },
-  { key: 'psychomotor' as const, label: 'Psychomotor (Simpson, 1972)'            },
+  { key: 'cognitive'   as const, label: 'Cognitive' },
+  { key: 'affective'   as const, label: 'Affective' },
+  { key: 'psychomotor' as const, label: 'Psychomotor' },
 ]

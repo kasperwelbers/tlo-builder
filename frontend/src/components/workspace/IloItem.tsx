@@ -1,30 +1,32 @@
-import { useState } from "react"
-import { Check, Trash2, X } from "lucide-react"
+import { useState, useMemo } from "react"
+import { Trash2, X, Link2, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { BloomSelect } from "@/components/ui/bloom-select"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command"
 import { useApp } from "@/context/AppContext"
 import type { CourseObjective, Ilo } from "@/lib/types"
 
-const BLOOM_LEVELS = [
-  "Remembering", "Understanding", "Applying", "Analyzing", "Evaluating", "Creating"
-]
-
 interface IloItemProps {
   ilo: Ilo
-  linkedCo: CourseObjective | undefined
+  linkedCo?: CourseObjective | undefined
   linkedCourseName?: string
-  onEdit: () => void
+  onEdit?: () => void
   onDelete: () => void
-  onUnlinkCo: () => void
+  onUnlinkCo?: () => void
 }
 
-export function IloItem({ ilo, linkedCo, linkedCourseName, onDelete, onUnlinkCo }: IloItemProps) {
-  const { send } = useApp()
+export function IloItem({ ilo, onDelete }: IloItemProps) {
+  const { state, send } = useApp()
   const [editingField, setEditingField] = useState<'name' | 'description' | null>(null)
   const [editValue, setEditValue] = useState('')
 
@@ -35,14 +37,21 @@ export function IloItem({ ilo, linkedCo, linkedCourseName, onDelete, onUnlinkCo 
 
   const handleSave = () => {
     if (!editingField) return
-    send({
-      type: "ilo:update",
-      id: ilo.id,
-      name: editingField === 'name' ? editValue : ilo.name,
-      description: editingField === 'description' ? editValue : ilo.description,
-      bloomLevel: ilo.bloomLevel,
-      tloId: ilo.tloId
-    })
+
+    const isUnchanged =
+      (editingField === 'name' && editValue === ilo.name) ||
+      (editingField === 'description' && editValue === (ilo.description || ''))
+
+    if (!isUnchanged) {
+      send({
+        type: "ilo:update",
+        id: ilo.id,
+        name: editingField === 'name' ? editValue : ilo.name,
+        description: editingField === 'description' ? editValue : ilo.description,
+        bloomLevel: ilo.bloomLevel,
+        tloId: ilo.tloId
+      })
+    }
     setEditingField(null)
   }
 
@@ -57,106 +66,166 @@ export function IloItem({ ilo, linkedCo, linkedCourseName, onDelete, onUnlinkCo 
     })
   }
 
+  const mappings = state.iloCourseObjectiveMappings.filter(m => m.iloId === ilo.id)
+
+  const handleAddLink = (courseId: number, courseObjectiveId: number | null) => {
+    send({ type: "ilo_course_objective_mapping:add", iloId: ilo.id, courseId, courseObjectiveId })
+  }
+  const handleRemoveLink = (courseId: number, courseObjectiveId: number | null) => {
+    send({ type: "ilo_course_objective_mapping:delete", iloId: ilo.id, courseId, courseObjectiveId })
+  }
+
+  const courseById = useMemo(() => new Map(state.courses.map(c => [c.id, c])), [state.courses])
+
   return (
     <div className="flex items-center gap-3 rounded-md px-3 py-1.5 hover:bg-muted/50 group w-full text-sm">
-      <div className="w-32 shrink-0">
-        <Select value={ilo.bloomLevel || ""} onValueChange={handleBloomChange}>
-          <SelectTrigger className="h-7 text-xs font-mono border-transparent group-hover:border-border px-2">
-            <SelectValue placeholder="Bloom" />
-          </SelectTrigger>
-          <SelectContent>
-            {BLOOM_LEVELS.map(level => (
-              <SelectItem key={level} value={level}>
-                {level}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="shrink-0 opacity-90 hover:opacity-100 transition-opacity flex items-center justify-center">
+        <BloomSelect value={ilo.bloomLevel || ""} onValueChange={handleBloomChange} />
       </div>
 
-      <div className="w-1/3 min-w-[150px]">
+      <div className="flex-1 flex flex-col min-w-[200px] justify-center">
         {editingField === 'name' ? (
-          <div className="flex items-center gap-1">
-            <Input
-              value={editValue}
-              onChange={e => setEditValue(e.target.value)}
-              className="h-7 text-sm font-medium"
-              autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingField(null); }}
-            />
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={handleSave}><Check className="size-4" /></Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => setEditingField(null)}><X className="size-4" /></Button>
-          </div>
+          <Input
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            className="h-5 text-sm font-medium w-full"
+            autoFocus
+            onBlur={handleSave}
+            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingField(null); }}
+          />
         ) : (
           <div
-            className="font-medium cursor-pointer px-2 py-1 rounded hover:bg-muted truncate"
+            className="h-5 font-medium cursor-pointer px-1.5 py-0.5 rounded hover:bg-muted truncate"
             onClick={() => handleStartEdit('name', ilo.name)}
           >
             {ilo.name}
           </div>
         )}
-      </div>
 
-      <div className="flex-1 min-w-[200px] flex items-center gap-2">
         {editingField === 'description' ? (
-          <div className="flex items-center gap-1 w-full">
-            <Input
-              value={editValue}
-              onChange={e => setEditValue(e.target.value)}
-              className="h-7 text-sm w-full"
-              autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingField(null); }}
-            />
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 shrink-0" onClick={handleSave}><Check className="size-4" /></Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground shrink-0" onClick={() => setEditingField(null)}><X className="size-4" /></Button>
-          </div>
+          <Input
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            className="h-5 text-xs text-muted-foreground w-full"
+            autoFocus
+            onBlur={handleSave}
+            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingField(null); }}
+          />
         ) : (
           <div
-            className="text-muted-foreground cursor-pointer px-2 py-1 rounded hover:bg-muted truncate flex-1"
+            className="h-5 text-xs text-muted-foreground cursor-pointer px-1.5 py-0.5 rounded hover:bg-muted truncate"
             onClick={() => handleStartEdit('description', ilo.description || '')}
           >
             {ilo.description || <span className="italic opacity-50">No description</span>}
           </div>
         )}
-
-        {linkedCo && (
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground truncate max-w-[120px]">
-              📎 {linkedCourseName ?? ""}: {linkedCo.name}
-            </span>
-            <button
-              onClick={onUnlinkCo}
-              className="text-muted-foreground/60 hover:text-muted-foreground"
-              title="Unlink course objective"
-            >
-              <X className="size-3" />
-            </button>
-          </div>
-        )}
       </div>
 
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button
-            variant="ghost" size="icon"
-            className="size-7 shrink-0 opacity-0 group-hover:opacity-100 text-destructive"
-          >
-            <Trash2 className="size-4" />
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete <strong>{ilo.name}</strong> and remove all its mappings.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <div className="shrink-0 flex items-center gap-1">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={mappings.length > 0 ? "h-7 text-xs px-2 gap-1 rounded-full" : "h-7 text-xs px-2 gap-1 rounded-full border-dashed text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity"}>
+              <Link2 className={mappings.length > 0 ? "size-3.5" : "size-3.5 opacity-70"} />
+              {mappings.length > 0 ? (
+                <span className="font-medium">{mappings.length}</span>
+              ) : (
+                <span>Link</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-0" align="end">
+            <Command>
+              <CommandInput placeholder="Search courses or objectives..." />
+              <CommandList>
+                <CommandEmpty>No results found.</CommandEmpty>
+                {mappings.length > 0 && (
+                  <CommandGroup heading="Current Links">
+                    {mappings.map(m => {
+                      const course = courseById.get(m.courseId)
+                      const co = m.courseObjectiveId ? state.courseObjectives.find(c => c.id === m.courseObjectiveId) : null
+                      return (
+                        <CommandItem
+                          key={`${m.courseId}-${m.courseObjectiveId}`}
+                          className="flex items-start gap-2 text-xs"
+                          onSelect={() => handleRemoveLink(m.courseId, m.courseObjectiveId)}
+                        >
+                          <Check className="size-3.5 shrink-0 mt-0.5" />
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="font-medium truncate">{course?.name}</span>
+                            {co && <span className="text-muted-foreground truncate">{co.name}</span>}
+                            {!co && <span className="text-muted-foreground italic text-[10px]">Course Level</span>}
+                          </div>
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                )}
+
+                <CommandGroup heading="Add Link">
+                  {state.courses.map(course => {
+                    const isCourseMapped = mappings.some(m => m.courseId === course.id && m.courseObjectiveId === null)
+                    const courseObjectives = state.courseObjectives.filter(co => co.courseId === course.id)
+                    return (
+                      <div key={`c-${course.id}`}>
+                        {!isCourseMapped && (
+                          <CommandItem
+                            className="flex items-start gap-2 text-xs pl-6"
+                            onSelect={() => handleAddLink(course.id, null)}
+                          >
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="font-medium truncate">{course.name}</span>
+                              <span className="text-muted-foreground italic text-[10px]">Link at course level</span>
+                            </div>
+                          </CommandItem>
+                        )}
+                        {courseObjectives.map(co => {
+                          const isCoMapped = mappings.some(m => m.courseObjectiveId === co.id)
+                          if (isCoMapped) return null
+                          return (
+                            <CommandItem
+                              key={`co-${co.id}`}
+                              className="flex items-start gap-2 text-xs pl-6"
+                              onSelect={() => handleAddLink(course.id, co.id)}
+                            >
+                              <div className="flex flex-col flex-1 min-w-0">
+                                <span className="font-medium truncate">{course.name}</span>
+                                <span className="text-muted-foreground truncate">{co.name}</span>
+                              </div>
+                            </CommandItem>
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost" size="icon"
+              className="size-7 shrink-0 opacity-0 group-hover:opacity-100 text-destructive"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete <strong>{ilo.name}</strong> and remove all its mappings.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   )
 }

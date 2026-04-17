@@ -28,7 +28,8 @@ export interface CourseObjective {
 
 export interface IloCourseObjectiveMapping {
   iloId: number
-  courseObjectiveId: number
+  courseId: number
+  courseObjectiveId: number | null
   projectId: string
 }
 

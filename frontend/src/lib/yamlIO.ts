@@ -10,13 +10,17 @@ export function exportToYaml(state: AppState): void {
   const courseById = new Map(courses.map(c => [c.id, c]))
   const coById = new Map(courseObjectives.map(co => [co.id, co]))
 
-  const iloCoMap = new Map<number, { course: string; name: string }[]>()
+  const iloCoMap = new Map<number, { course: string; name?: string }[]>()
   for (const mapping of iloCourseObjectiveMappings) {
-    const co = coById.get(mapping.courseObjectiveId)
-    if (!co) continue
-    const courseName = courseById.get(co.courseId)?.name ?? ""
+    const courseName = courseById.get(mapping.courseId)?.name ?? ""
+    if (!courseName) continue
     const arr = iloCoMap.get(mapping.iloId) ?? []
-    arr.push({ course: courseName, name: co.name })
+    if (mapping.courseObjectiveId) {
+      const co = coById.get(mapping.courseObjectiveId)
+      if (co) arr.push({ course: courseName, name: co.name })
+    } else {
+      arr.push({ course: courseName })
+    }
     iloCoMap.set(mapping.iloId, arr)
   }
 
