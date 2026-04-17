@@ -92,7 +92,6 @@ export function TloSection({
                   ilo={ilo}
                   linkedCo={linkedCo}
                   linkedCourseName={linkedCo ? (courseById.get(linkedCo.courseId)?.name ?? '') : undefined}
-                  onEdit={() => setEditIlo(ilo)}
                   onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
                   onUnlinkCo={() => {
                     const m = iloCourseObjectiveMappings.find(m => m.iloId === ilo.id)

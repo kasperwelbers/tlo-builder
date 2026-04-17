@@ -99,7 +99,7 @@ export function WorkspacePage() {
               trajectory={t}
               tlos={byTrajectory.get(t.id) ?? []}
               ilos={state.ilos}
-              tloIloMappings={state.tloIloMappings}
+
               iloCourseObjectiveMappings={state.iloCourseObjectiveMappings}
               courseObjectives={state.courseObjectives}
               collapsed={collapsed.has(t.id)}

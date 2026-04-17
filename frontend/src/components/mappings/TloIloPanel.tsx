@@ -12,7 +12,8 @@ import { useApp } from '@/context/AppContext'
 
 export function TloIloPanel() {
   const { state, send } = useApp()
-  const { tlos, ilos, tloIloMappings, trajectories } = state
+  const { tlos, ilos, trajectories } = state
+  const tloIloMappings = ilos.filter(i => i.tloId !== null).map(i => ({ tloId: i.tloId!, iloId: i.id }))
   const trajectoryById = new Map(trajectories.map(t => [t.id, t]))
 
   // Track which TLO has an open ILO-assign selector

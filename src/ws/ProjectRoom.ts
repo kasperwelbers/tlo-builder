@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { type Env } from '../types'
 import { getDb } from '../db'
 import { eq } from 'drizzle-orm'
-import { projects, trajectories, tlos, ilos, courseObjectives, tloIloMappings, iloCourseObjectiveMappings, courses } from '../db/schema'
+import { projects, trajectories, tlos, ilos, courseObjectives, iloCourseObjectiveMappings, courses } from '../db/schema'
 import { handleMessage, type SyncTable } from './handlers'
 
 export class ProjectRoom extends DurableObject<Env> {
@@ -79,8 +79,6 @@ export class ProjectRoom extends DurableObject<Env> {
         return db.select().from(ilos).where(eq(ilos.projectId, projectId))
       case 'course_objectives':
         return db.select().from(courseObjectives).where(eq(courseObjectives.projectId, projectId))
-      case 'tlo_ilo_mappings':
-        return db.select().from(tloIloMappings).where(eq(tloIloMappings.projectId, projectId))
       case 'ilo_course_objective_mappings':
         return db.select().from(iloCourseObjectiveMappings).where(eq(iloCourseObjectiveMappings.projectId, projectId))
     }
@@ -92,13 +90,12 @@ export class ProjectRoom extends DurableObject<Env> {
     // Ensure the project row exists
     await db.insert(projects).values({ id: projectId, name: 'Untitled Project' }).onConflictDoNothing()
 
-    const [allTrajectories, allCourses, allTlos, allIlos, allCourseObjectives, allTloIloMappings, allIloCourseObjectiveMappings] = await Promise.all([
+    const [allTrajectories, allCourses, allTlos, allIlos, allCourseObjectives, allIloCourseObjectiveMappings] = await Promise.all([
       db.select().from(trajectories).where(eq(trajectories.projectId, projectId)),
       db.select().from(courses).where(eq(courses.projectId, projectId)),
       db.select().from(tlos).where(eq(tlos.projectId, projectId)),
       db.select().from(ilos).where(eq(ilos.projectId, projectId)),
       db.select().from(courseObjectives).where(eq(courseObjectives.projectId, projectId)),
-      db.select().from(tloIloMappings).where(eq(tloIloMappings.projectId, projectId)),
       db.select().from(iloCourseObjectiveMappings).where(eq(iloCourseObjectiveMappings.projectId, projectId)),
     ])
 
@@ -108,7 +105,6 @@ export class ProjectRoom extends DurableObject<Env> {
       tlos:                        allTlos,
       ilos:                        allIlos,
       courseObjectives:            allCourseObjectives,
-      tloIloMappings:              allTloIloMappings,
       iloCourseObjectiveMappings:  allIloCourseObjectiveMappings,
     }
   }

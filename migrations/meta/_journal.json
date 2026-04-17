@@ -2,6 +2,19 @@
   "version": "7",
   "dialect": "sqlite",
   "entries": [
-    { "idx": 0, "version": "7", "when": 1700000000000, "tag": "0000_initial", "breakpoints": true }
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1776404079120,
+      "tag": "0000_hot_machine_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1776406467657,
+      "tag": "0001_cloudy_proemial_gods",
+      "breakpoints": true
+    }
   ]
 }

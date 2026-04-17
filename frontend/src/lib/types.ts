@@ -10,6 +10,7 @@ export interface Tlo {
 export interface Ilo {
   id: number
   projectId: string
+  tloId: number | null
   name: string
   description: string
   bloomLevel: string | null
@@ -23,11 +24,7 @@ export interface CourseObjective {
   description: string
 }
 
-export interface TloIloMapping {
-  tloId: number
-  iloId: number
-  projectId: string
-}
+
 
 export interface IloCourseObjectiveMapping {
   iloId: number
@@ -56,7 +53,7 @@ export interface AppState {
   tlos: Tlo[]
   ilos: Ilo[]
   courseObjectives: CourseObjective[]
-  tloIloMappings: TloIloMapping[]
+
   iloCourseObjectiveMappings: IloCourseObjectiveMapping[]
   courses: Course[]
 }

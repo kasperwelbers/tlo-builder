@@ -20,7 +20,7 @@ interface TrajectoryAccordionProps {
   trajectory: Trajectory
   tlos: Tlo[]
   ilos: Ilo[]
-  tloIloMappings: TloIloMapping[]
+
   iloCourseObjectiveMappings: IloCourseObjectiveMapping[]
   courseObjectives: CourseObjective[]
   collapsed: boolean
@@ -33,7 +33,7 @@ interface TrajectoryAccordionProps {
 }
 
 export function TrajectoryAccordion({
-  trajectory, tlos, ilos, tloIloMappings, iloCourseObjectiveMappings, courseObjectives,
+  trajectory, tlos, ilos, iloCourseObjectiveMappings, courseObjectives,
   collapsed, onToggle, onUpdate, onDelete, onAddTlo, onEditTlo, onDeleteTlo,
 }: TrajectoryAccordionProps) {
   const [editOpen, setEditOpen] = useState(false)
@@ -56,8 +56,7 @@ export function TrajectoryAccordion({
   }
 
   function getIlosForTlo(tloId: number) {
-    const iloIds = new Set(tloIloMappings.filter(m => m.tloId === tloId).map(m => m.iloId))
-    return ilos.filter(ilo => iloIds.has(ilo.id))
+    return ilos.filter(i => i.tloId === tloId)
   }
 
   const accentColor = trajectory.color || '#64748b'

@@ -1,10 +1,10 @@
 import { type DB } from '../db'
-import { trajectories, courses, tlos, ilos, courseObjectives, tloIloMappings, iloCourseObjectiveMappings } from '../db/schema'
+import { trajectories, courses, tlos, ilos, courseObjectives, iloCourseObjectiveMappings } from '../db/schema'
 import { and, eq, inArray } from 'drizzle-orm'
 
 export type SyncTable =
   | 'trajectories' | 'courses' | 'tlos' | 'ilos'
-  | 'course_objectives' | 'tlo_ilo_mappings' | 'ilo_course_objective_mappings'
+  | 'course_objectives' | 'ilo_course_objective_mappings'
 
 // ── Trajectories ──────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ async function deleteTrajectory(db: DB, data: any) {
     .where(and(eq(tlos.projectId, data.projectId), eq(tlos.trajectoryId, data.trajectoryId)))
   if (tloRows.length) {
     const ids = tloRows.map(r => r.id)
-    await db.delete(tloIloMappings).where(inArray(tloIloMappings.tloId, ids))
+    await db.update(ilos).set({ tloId: null }).where(inArray(ilos.tloId, ids))
     await db.delete(tlos).where(inArray(tlos.id, ids))
   }
   await db.delete(trajectories).where(eq(trajectories.id, data.trajectoryId))
@@ -54,7 +54,7 @@ async function updateTlo(db: DB, data: any) {
 }
 
 async function deleteTlo(db: DB, data: any) {
-  await db.delete(tloIloMappings).where(eq(tloIloMappings.tloId, data.id))
+  await db.update(ilos).set({ tloId: null }).where(eq(ilos.tloId, data.id))
   await db.delete(tlos).where(eq(tlos.id, data.id))
 }
 
@@ -62,7 +62,7 @@ async function deleteTlo(db: DB, data: any) {
 
 async function addIlo(db: DB, data: any) {
   await db.insert(ilos).values({
-    projectId: data.projectId, name: data.name,
+    projectId: data.projectId, name: data.name, tloId: data.tloId ?? null,
     description: data.description ?? '', bloomLevel: data.bloomLevel ?? null,
   })
 }
@@ -70,11 +70,11 @@ async function addIlo(db: DB, data: any) {
 async function updateIlo(db: DB, data: any) {
   await db.update(ilos).set({
     name: data.name, description: data.description, bloomLevel: data.bloomLevel ?? null,
+    ...(data.tloId !== undefined ? { tloId: data.tloId } : {})
   }).where(eq(ilos.id, data.id))
 }
 
 async function deleteIlo(db: DB, data: any) {
-  await db.delete(tloIloMappings).where(eq(tloIloMappings.iloId, data.id))
   await db.delete(iloCourseObjectiveMappings).where(eq(iloCourseObjectiveMappings.iloId, data.id))
   await db.delete(ilos).where(eq(ilos.id, data.id))
 }
@@ -132,16 +132,6 @@ async function deleteCourseObjective(db: DB, data: any) {
 
 // ── Mappings ──────────────────────────────────────────────────────────────────
 
-async function addTloIloMapping(db: DB, data: any) {
-  await db.delete(tloIloMappings).where(eq(tloIloMappings.iloId, data.iloId))
-  await db.insert(tloIloMappings).values({ tloId: data.tloId, iloId: data.iloId, projectId: data.projectId })
-}
-
-async function deleteTloIloMapping(db: DB, data: any) {
-  await db.delete(tloIloMappings).where(
-    and(eq(tloIloMappings.tloId, data.tloId), eq(tloIloMappings.iloId, data.iloId)))
-}
-
 async function addIloCourseObjectiveMapping(db: DB, data: any) {
   await db.insert(iloCourseObjectiveMappings).values({
     iloId: data.iloId, courseObjectiveId: data.courseObjectiveId, projectId: data.projectId,
@@ -161,16 +151,16 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
     case 'trajectory:create': await createTrajectory(db, data); return ['trajectories']
     case 'trajectory:update': await updateTrajectory(db, data); return ['trajectories']
     case 'trajectory:rename': await renameTrajectory(db, data); return ['trajectories']
-    case 'trajectory:delete': await deleteTrajectory(db, data); return ['trajectories', 'tlos', 'tlo_ilo_mappings']
+    case 'trajectory:delete': await deleteTrajectory(db, data); return ['trajectories', 'tlos', 'ilos']
 
     case 'tlo:add':    await addTlo(db, data);    return ['tlos']
     case 'tlo:update': await updateTlo(db, data); return ['tlos']
-    case 'tlo:delete': await deleteTlo(db, data); return ['tlos', 'tlo_ilo_mappings']
+    case 'tlo:delete': await deleteTlo(db, data); return ['tlos', 'ilos']
 
     case 'ilo:create': return addIloWithLinks(db, data)
     case 'ilo:add':    await addIlo(db, data);    return ['ilos']
     case 'ilo:update': await updateIlo(db, data); return ['ilos']
-    case 'ilo:delete': await deleteIlo(db, data); return ['ilos', 'tlo_ilo_mappings', 'ilo_course_objective_mappings']
+    case 'ilo:delete': await deleteIlo(db, data); return ['ilos', 'ilo_course_objective_mappings']
 
     case 'course:create': await createCourse(db, data); return ['courses']
     case 'course:update': await updateCourse(db, data); return ['courses']
@@ -180,9 +170,6 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
     case 'course_objective:add':    await addCourseObjective(db, data);    return ['course_objectives']
     case 'course_objective:update': await updateCourseObjective(db, data); return ['course_objectives']
     case 'course_objective:delete': await deleteCourseObjective(db, data); return ['course_objectives', 'ilo_course_objective_mappings']
-
-    case 'tlo_ilo_mapping:add':    await addTloIloMapping(db, data);    return ['tlo_ilo_mappings']
-    case 'tlo_ilo_mapping:delete': await deleteTloIloMapping(db, data); return ['tlo_ilo_mappings']
 
     case 'ilo_course_objective_mapping:add':    await addIloCourseObjectiveMapping(db, data);    return ['ilo_course_objective_mappings']
     case 'ilo_course_objective_mapping:delete': await deleteIloCourseObjectiveMapping(db, data); return ['ilo_course_objective_mappings']
@@ -199,14 +186,11 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
 
 export async function addIloWithLinks(db: DB, data: any): Promise<SyncTable[]> {
   const [newIlo] = await db.insert(ilos).values({
-    projectId: data.projectId, name: data.name,
+    projectId: data.projectId, name: data.name, tloId: data.tloId ?? null,
     description: data.description ?? '', bloomLevel: data.bloomLevel ?? null,
   }).returning()
 
-  await db.delete(tloIloMappings).where(eq(tloIloMappings.iloId, newIlo.id))
-  await db.insert(tloIloMappings).values({ tloId: data.tloId, iloId: newIlo.id, projectId: data.projectId })
-
-  const tables: SyncTable[] = ['ilos', 'tlo_ilo_mappings']
+  const tables: SyncTable[] = ['ilos']
   if (data.courseObjectiveId) {
     await db.insert(iloCourseObjectiveMappings).values({
       iloId: newIlo.id, courseObjectiveId: data.courseObjectiveId, projectId: data.projectId,
@@ -258,10 +242,9 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
       }).returning()
       for (const iloData of tloData.ilos ?? []) {
         const [newIlo] = await db.insert(ilos).values({
-          projectId, name: iloData.name,
+          projectId, name: iloData.name, tloId: newTlo.id,
           description: iloData.description ?? '', bloomLevel: iloData.bloom_level ?? null,
         }).returning()
-        await db.insert(tloIloMappings).values({ tloId: newTlo.id, iloId: newIlo.id, projectId })
         for (const coRef of iloData.course_objectives ?? []) {
           const coId = coMap.get(`${coRef.course}::${coRef.name}`)
           if (coId !== undefined)
@@ -272,5 +255,5 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     }
   }
 
-  return ['trajectories', 'courses', 'tlos', 'ilos', 'course_objectives', 'tlo_ilo_mappings', 'ilo_course_objective_mappings']
+  return ['trajectories', 'courses', 'tlos', 'ilos', 'course_objectives', 'ilo_course_objective_mappings']
 }

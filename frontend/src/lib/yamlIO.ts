@@ -4,7 +4,8 @@ import type { AppState } from '@/lib/types'
 // ── Export ────────────────────────────────────────────────────────────────────
 
 export function exportToYaml(state: AppState): void {
-  const { tlos, ilos, courseObjectives, tloIloMappings, iloCourseObjectiveMappings, trajectories, courses } = state
+  const { tlos, ilos, courseObjectives, iloCourseObjectiveMappings, trajectories, courses } = state
+  const tloIloMappings = ilos.filter(i => i.tloId !== null).map(i => ({ tloId: i.tloId!, iloId: i.id }))
 
   const courseById = new Map(courses.map(c => [c.id, c]))
   const coById = new Map(courseObjectives.map(co => [co.id, co]))

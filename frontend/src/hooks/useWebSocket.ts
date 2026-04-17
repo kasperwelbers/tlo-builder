@@ -6,7 +6,6 @@ const INITIAL_STATE: AppState = {
   tlos: [],
   ilos: [],
   courseObjectives: [],
-  tloIloMappings: [],
   iloCourseObjectiveMappings: [],
   courses: [],
 }
@@ -57,7 +56,6 @@ export function useWebSocket(projectId: string) {
                 tlos: d.tlos ?? [],
                 ilos: d.ilos ?? [],
                 courseObjectives: d.courseObjectives ?? [],
-                tloIloMappings: d.tloIloMappings ?? [],
                 iloCourseObjectiveMappings: d.iloCourseObjectiveMappings ?? [],
                 courses: d.courses ?? [],
               })
@@ -74,9 +72,6 @@ export function useWebSocket(projectId: string) {
               break
             case "sync:course_objectives":
               setState(s => ({ ...s, courseObjectives: msg.data as AppState["courseObjectives"] }))
-              break
-            case "sync:tlo_ilo_mappings":
-              setState(s => ({ ...s, tloIloMappings: msg.data as AppState["tloIloMappings"] }))
               break
             case "sync:ilo_course_objective_mappings":
               setState(s => ({

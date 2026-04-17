@@ -1,0 +1,28 @@
+trajectory,name,outcome,bloom
+Academic Skills,AS1,"The student can create academic products (written, verbal, visual)",C6
+Academic Skills,AS2,The student can commit to shared ideas about academic integrity,A3
+Academic Skills,AS3,The student can develop a valid argument,C6
+Academic Skills,AS4,The student can take the position of the curious academic,A3
+Communication science in the context of social sciences,CSCS1,"(The student can identify and define key concepts, categories and foundational terminology related to communication science within the broader scientific landscape).   The student can identify, define and understand key concepts, and theories related to communication science within the broader scientific landscape   (C2 – Understand)",C2
+Communication science in the context of social sciences,CSCS2,"The student can identify, define and understand classic theories in communication science and significant theoretical additions or extensions in relation to contemporary issues.   (C2 – Understand)",C2
+Communication science in the context of social sciences,CSCS3,The student can explain and summarize how communication science is embedded within academic domains and describe its relationship to epistemology.   (C2 – Understand),C2
+Communication science in the context of social sciences,CSCS4,The student can apply central theories and conceptual frameworks from communication science to illustrate and interpret social phenomena and emerging developments.   (C3 – Apply),C3
+Communication science in the context of social sciences,CSCS5,"The student can evaluate and substantiate the role of communication science, in comparison with other scientific disciplines, in addressing complex societal problems.   (C5 – Evaluate)",C5
+Communication science in the context of social sciences,CSCS6,The student can design and develop theoretically grounded models or scenarios using communication science to predict future developments and generate innovative insights into social change.   (C6 – Create),C6
+Methods & Techniques of Social Science Research,MTSR-M1,The student can take the position of a responsible data steward.  ,A3
+Methods & Techniques of Social Science Research,MTSR-M2,The student can apply and contrast the primary data requirements across the four methodological traditions.  ,C3
+Methods & Techniques of Social Science Research,MTSR-M3,The student can justify the data collection and processing choices within at least one methodological tradition.  ,C5
+Methods & Techniques of Social Science Research,MTSR-A1,"The student can perform common analytical techniques (e.g., ANOVA, Grounded Theory) to investigate research questions and test hypotheses.  ",C3
+Methods & Techniques of Social Science Research,MTSR-A2,"The student can relate the four methodological traditions to different types of inferences (e.g., causal, correlational, inductive, deductive).  ",C4
+Methods & Techniques of Social Science Research,MTSR-A3,The student can justify and critique the validity of measurement instruments and analytical techniques within at least one methodological tradition.   ,C5
+Methods & Techniques of Social Science Research,MTSR-S1,"The student can break down whether a narrative is supported by empirical evidence, and criticise unclear or misleading design choices.  ",C4
+Methods & Techniques of Social Science Research,MTSR-S2,"The student can apply the standard reporting conventions for analytical results (e.g., APA, visualizations) across the four methodological traditions.  ",C3
+Methods & Techniques of Social Science Research,MTSR-S3,"The student can synthesize empirical evidence to support arguments that accurately and transparently represent the data analysis, within at least one methodological tradition.   ",C5
+Professional Competences,PC1,The student understands the effects of media and communication on society.   ,C2
+Professional Competences,PC2,The student critically evaluates the societal and ethical effects of communication by their organization.    ,C5
+Professional Competences,PC3,The student reflects on and articulates their role and responsibility as communication scientist within organizational dynamics and in society.    ,A4
+Professional Competences,PC4,The student is capable of developing and executing plans and advice to strategically position the organization.  ,C6
+Professional Competences,PC6,"The student can analyze different communications tools in terms of their opportunities, limitations, and appropriateness for specific contexts.   ",C4
+Professional Competences,PC5,"The student can design and justiify coherent communication plans and advice alined with organizational objectives, tailored to specific targets, content, and media for internal and external stakeholders",C5
+Professional Competences,PC7,"The student evaluates the effectiveness of communication interventions and adapts them based on feedback, outcomes, and contextual changes.",
+Professional Competences,PC8,"PC8 The student embodies key professional soft skills, such as flexibility, adaptability, active listening, interpersonal skills,  and self-reflection, within organizational settings.   Bloom: A5 - Internalise",A5
