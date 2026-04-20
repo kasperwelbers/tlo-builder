@@ -67,7 +67,6 @@ function CourseLevelDropZone({ children, isEmpty }: { children: React.ReactNode;
     >
       {isEmpty ? (
         <p className={cn("text-xs text-muted-foreground italic", isOver && "text-primary")}>
-          Drop ILOs here to link at course level
         </p>
       ) : (
         children
@@ -240,8 +239,8 @@ export function CloPage({ courseId }: Props) {
         <div className="space-y-4">
           {/* Course-level (unlinked) ILOs */}
           <div className="space-y-1.5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
-              These ILO need to be assigned to CLO
+            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground px-1">
+              ILOs without CLOs
             </h3>
             <CourseLevelDropZone isEmpty={unlinkedIlos.length === 0}>
               <div className="py-1">

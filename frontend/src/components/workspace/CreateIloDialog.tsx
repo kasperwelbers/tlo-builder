@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Search, ArrowLeft } from "lucide-react"
+import { Search, ArrowLeft, Plus } from "lucide-react"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { BloomSelect } from "@/components/ui/bloom-select"
 import { OrderBadge } from "@/components/ui/order-badge"
+import { bloomBadgeClass } from "@/lib/bloomColors"
+import { cn } from "@/lib/utils"
 import { useApp } from "@/context/AppContext"
 import { useHelp } from "@/context/HelpContext"
 import type { Clo, Course, Tlo } from "@/lib/types"
@@ -31,7 +33,6 @@ interface CourseGroup {
 export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDialogProps) {
   const { send, state } = useApp()
   const { openHelp } = useHelp()
-  const courseById = new Map(state.courses.map(c => [c.id, c]))
 
   const [search, setSearch] = useState("")
   const [step, setStep] = useState<Step>("browse")
@@ -71,11 +72,6 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
   const hasAnything = state.courses.length > 0
   const hasResults = groups.length > 0
 
-  function handleSelectCourse(course: Course) {
-    send({ type: "ilo:create", tloId: tlo.id, description: "", bloomLevel: null, courseId: course.id })
-    onOpenChange(false)
-  }
-
   function handleSelectClo(clo: Clo) {
     setSelectedClo(clo)
     setIloDescription(clo.description)
@@ -100,7 +96,7 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base sr-only">
-            {step === "browse" ? "ILO from CLO" : "Configure ILO"}
+            Configure ILO
           </DialogTitle>
           <p className="text-sm text-muted-foreground sr-only">
             For TLO: <span className="font-medium text-foreground">{tlo.name}</span>
@@ -109,6 +105,15 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
 
         {step === "browse" && (
           <>
+            <p className="text-xs text-muted-foreground leading-snug -mt-2">
+              Choose a CLO to base this ILO on, or add it directly to a course and link a CLO later.
+            </p>
+            {tlo.description && (
+              <p className="text-xs text-muted-foreground italic leading-snug line-clamp-2">
+                {tlo.description}
+              </p>
+            )}
+
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
@@ -120,7 +125,7 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
               />
             </div>
 
-            {/* Fixed height — no layout shift when results change */}
+            {/* Fixed height -- no layout shift when results change */}
             <div className="h-72 overflow-y-auto rounded-md border">
               {!hasAnything ? (
                 <div className="flex h-full items-center justify-center px-4">
@@ -135,32 +140,44 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
               ) : (
                 <div>
                   {groups.map(({ course, orderNum, visibleClos }) => (
-                    <div key={course.id} className="border-b last:border-b-0">
-                      {/* Course row — click to link at course level */}
-                      <div
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-accent cursor-pointer"
-                        onClick={() => handleSelectCourse(course)}
-                      >
+                    <div key={course.id} className="border-b last:border-b-0" style={{ backgroundColor: course.color + '15' }}>
+                      {/* Course row -- non-interactive header */}
+                      <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: course.color + '28' }}>
                         <OrderBadge num={orderNum} color={course.color} shape="square" />
-                        <span className="flex-1 text-sm font-medium">{course.name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">course level</span>
+                        <span className="flex-1 text-xs font-semibold">{course.name}</span>
                       </div>
 
-                      {/* CLO rows — indented to show membership */}
+                      {/* CLO rows -- indented to show membership */}
                       {visibleClos.map(clo => (
                         <div
                           key={clo.id}
-                          className="flex items-start gap-2 pl-7 pr-3 py-1.5 hover:bg-accent cursor-pointer border-t border-border/40"
+                          className="flex items-start gap-2 pl-10 pr-3 py-1.5 hover:bg-accent cursor-pointer border-t border-border/40"
                           onClick={() => handleSelectClo(clo)}
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm text-foreground/80 line-clamp-2 leading-snug">
+                            <p className="text-xs text-foreground/80 line-clamp-2 leading-snug">
                               {clo.description || "No description"}
                             </p>
                           </div>
-                          <span className="text-xs text-muted-foreground shrink-0 mt-0.5">use</span>
+                          {clo.bloomLevel && (
+                            <span className={cn("shrink-0 text-xs font-mono px-1.5 py-0.5 rounded-full border", bloomBadgeClass(clo.bloomLevel))}>
+                              {clo.bloomLevel}
+                            </span>
+                          )}
                         </div>
                       ))}
+
+                      {/* Add ILO at course level */}
+                      <div
+                        className="flex items-center gap-2 pl-10 pr-3 py-1.5 hover:bg-accent cursor-pointer border-t border-border/40"
+                        onClick={() => {
+                          send({ type: "ilo:create", tloId: tlo.id, description: "", bloomLevel: null, courseId: course.id })
+                          onOpenChange(false)
+                        }}
+                      >
+                        <Plus className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground "><strong>Add ILO to course</strong> (assign CLO later)</span>
+                      </div>
                     </div>
                   ))}
                 </div>

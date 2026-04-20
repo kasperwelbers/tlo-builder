@@ -178,31 +178,35 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
             )
           })}
 
-          {/* Link button (rightmost) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => setLinkOpen(true)}
-              >
-                <Link2 className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="top">Manage links</TooltipContent>
-          </Tooltip>
+          {/* Link button — workspace only */}
+          {variant === "workspace" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => setLinkOpen(true)}
+                >
+                  <Link2 className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Manage links</TooltipContent>
+            </Tooltip>
+          )}
 
         </div>
       </div>
 
-      {/* Link dialog rendered outside the row to avoid event conflicts */}
-      <IloLinkDialog
-        open={linkOpen}
-        onOpenChange={setLinkOpen}
-        ilo={ilo}
-        clos={state.clos}
-      />
+      {/* Link dialog — workspace only */}
+      {variant === "workspace" && (
+        <IloLinkDialog
+          open={linkOpen}
+          onOpenChange={setLinkOpen}
+          ilo={ilo}
+          clos={state.clos}
+        />
+      )}
     </>
   )
 }

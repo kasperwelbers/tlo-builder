@@ -191,10 +191,10 @@ export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProp
               className="text-muted-foreground"
               onClick={() => send({ type: "ilo:create", tloId: tlo.id, description: "", bloomLevel: null })}
             >
-              <Plus className="mr-1 size-3.5" /> Create ILO
+              <Plus className="mr-1 size-3.5" /> New ILO
             </Button>
             <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCreateFromCloOpen(true)}>
-              <Plus className="mr-1 size-3.5" /> ILO from CLO
+              <Plus className="mr-1 size-3.5" /> New ILO from CLO
             </Button>
           </div>
         </>

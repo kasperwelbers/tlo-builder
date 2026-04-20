@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ChevronDown, GripVertical, Trash2 } from "lucide-react"
+import { ChevronDown, GripVertical, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -12,6 +12,7 @@ import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { IloItem } from "@/components/workspace/IloItem"
 import { useApp } from "@/context/AppContext"
+import { CloLinkTloDialog } from "./CloLinkTloDialog"
 import { cn } from "@/lib/utils"
 import type { Clo, Ilo } from "@/lib/types"
 
@@ -58,6 +59,7 @@ export function CloSection({ clo, ilos, onDelete }: Props) {
   const { isOver, setNodeRef } = useDroppable({ id: clo.id })
 
   const [collapsed, setCollapsed] = useState(false)
+  const [linkOpen, setLinkOpen] = useState(false)
   const [editingDesc, setEditingDesc] = useState(false)
   const [editValue, setEditValue] = useState("")
 
@@ -179,9 +181,24 @@ export function CloSection({ clo, ilos, onDelete }: Props) {
             isOver && "text-primary"
           )}
         >
-          Drop ILOs here
+          {/*Drop ILOs here*/}
         </div>
       ))}
+      {/* Link to TLO button */}
+      {!collapsed && (
+        <div className="flex flex-wrap gap-2 px-3 pb-3 pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => setLinkOpen(true)}
+          >
+            <Plus className="mr-1 size-3.5" /> Link or Create ILO
+          </Button>
+        </div>
+      )}
+
+      <CloLinkTloDialog open={linkOpen} onOpenChange={setLinkOpen} clo={clo} />
     </div>
   )
 }
