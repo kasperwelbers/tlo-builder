@@ -18,7 +18,6 @@ import type { Clo, Ilo } from "@/lib/types"
 interface Props {
   clo: Clo
   ilos: Ilo[]
-  accentColor: string
   onDelete: () => void
 }
 
@@ -46,6 +45,7 @@ function DraggableIlo({ ilo }: { ilo: Ilo }) {
       <div className="flex-1 min-w-0">
         <IloItem
           ilo={ilo}
+          variant="course"
           onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
         />
       </div>
@@ -53,7 +53,7 @@ function DraggableIlo({ ilo }: { ilo: Ilo }) {
   )
 }
 
-export function CloSection({ clo, ilos, accentColor, onDelete }: Props) {
+export function CloSection({ clo, ilos, onDelete }: Props) {
   const { send } = useApp()
   const { isOver, setNodeRef } = useDroppable({ id: clo.id })
 
@@ -94,9 +94,8 @@ export function CloSection({ clo, ilos, accentColor, onDelete }: Props) {
       {/* CLO header */}
       <div
         className={cn("px-4 py-3 group", bgClass)}
-        style={{ borderLeft: `4px solid ${accentColor}` }}
       >
-        <div className="flex items-start gap-2">
+        <div className="flex items-center gap-2">
           {/* Description - left side, takes remaining space */}
           <div className="flex-1 min-w-0">
             {editingDesc ? (

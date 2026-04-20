@@ -17,9 +17,10 @@ import type { Ilo } from "@/lib/types"
 interface IloItemProps {
   ilo: Ilo
   onDelete: () => void
+  variant?: "workspace" | "course"
 }
 
-export function IloItem({ ilo, onDelete }: IloItemProps) {
+export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) {
   const { state, send } = useApp()
   const { navigateTo } = useNav()
   const [editingField, setEditingField] = useState<"description" | null>(null)
@@ -31,6 +32,11 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
   const courseOrderNum = new Map(sortedCourses.map((c, i) => [c.id, i + 1]))
   const cloById = new Map(state.clos.map(c => [c.id, c]))
   const mappings = state.iloCloMappings.filter(m => m.iloId === ilo.id)
+
+  const tloById = new Map(state.tlos.map(t => [t.id, t]))
+  const trajectoryById = new Map(state.trajectories.map(t => [t.id, t]))
+  const sortedTrajectories = [...state.trajectories].sort((a, b) => a.name.localeCompare(b.name))
+  const trajectoryOrderNum = new Map(sortedTrajectories.map((t, i) => [t.id, i + 1]))
 
   function handleStartEdit(value: string) {
     setEditingField("description")
@@ -63,7 +69,12 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
 
   return (
     <>
-      <div className="flex items-start gap-3 rounded-md px-3 py-1.5 hover:bg-muted/50 group w-full">
+      <div className="flex items-center gap-3 rounded-md px-3 py-1.5 hover:bg-muted/50 group w-full">
+        {/* Bloom level */}
+        <div className="shrink-0">
+          <BloomSelect value={ilo.bloomLevel || ""} onValueChange={handleBloomChange} />
+        </div>
+
         {/* Description */}
         <div className="flex-1 min-w-0">
           {editingField === "description" ? (
@@ -91,11 +102,31 @@ export function IloItem({ ilo, onDelete }: IloItemProps) {
           )}
         </div>
 
-        {/* Right side: bloom + course dots + link button + delete */}
+        {/* Right side: course dots + link button + delete */}
         <div className="shrink-0 flex items-center gap-1.5">
-          <BloomSelect value={ilo.bloomLevel || ""} onValueChange={handleBloomChange} />
-          {/* One colored badge per linked course */}
-          {mappings.map(m => {
+          {/* Badges: course links on workspace page, TLO link on course page */}
+          {variant === "course" ? (() => {
+            const tlo = ilo.tloId != null ? tloById.get(ilo.tloId) : null
+            const trajectory = tlo ? trajectoryById.get(tlo.trajectoryId) : null
+            if (!tlo || !trajectory) return null
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="shrink-0 rounded-full ring-offset-background hover:ring-2 hover:ring-ring hover:ring-offset-1 transition-all focus:outline-none"
+                    onClick={() => navigateTo({ type: "trajectory", id: trajectory.id })}
+                    aria-label={"Go to " + trajectory.name}
+                  >
+                    <OrderBadge num={trajectoryOrderNum.get(trajectory.id) ?? 0} color={trajectory.color} shape="circle" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-52">
+                  <p className="font-medium text-xs">{trajectory.name}</p>
+                  <p className="text-xs opacity-75 leading-snug">{tlo.name}</p>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })() : mappings.map(m => {
             const course = courseById.get(m.courseId)
             if (!course) return null
             const clo = m.cloId != null ? cloById.get(m.cloId) : null

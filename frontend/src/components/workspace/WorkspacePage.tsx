@@ -11,6 +11,7 @@ import { TloSection } from './TloSection'
 import { TloFormDialog } from '@/components/tlos/TloFormDialog'
 import { useApp } from '@/context/AppContext'
 import type { Tlo } from '@/lib/types'
+ import { bloomSortKey } from '@/lib/bloomLevels'
 
 interface Props {
   trajectoryId: number
@@ -163,7 +164,7 @@ export function WorkspacePage({ trajectoryId }: Props) {
               <TloSection
                 key={tlo.id}
                 tlo={tlo}
-                ilos={state.ilos.filter(i => i.tloId === tlo.id)}
+                ilos={state.ilos.filter(i => i.tloId === tlo.id).sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel))}
                 clos={state.clos}
                 onEdit={() => { setEditTlo(tlo); setAddTloOpen(true) }}
                 onDelete={() => send({ type: "tlo:delete", id: tlo.id })}

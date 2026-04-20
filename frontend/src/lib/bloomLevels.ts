@@ -92,3 +92,10 @@ export const BLOOM_CATEGORIES = [
   { key: 'affective'   as const, label: 'Affective' },
   { key: 'psychomotor' as const, label: 'Psychomotor' },
 ]
+
+/** Returns a numeric sort key for a bloom level code (nulls sort last). */
+export function bloomSortKey(code: string | null | undefined): number {
+  if (!code) return Infinity
+  const idx = BLOOM_LEVELS.findIndex(l => l.code === code)
+  return idx === -1 ? Infinity : idx
+}

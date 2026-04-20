@@ -13,6 +13,7 @@ import { CloSection } from "./CloSection"
 import { CloFormDialog } from "./CloFormDialog"
 import { IloItem } from "@/components/workspace/IloItem"
 import { useApp } from "@/context/AppContext"
+import { bloomSortKey } from "@/lib/bloomLevels"
 import { cn } from "@/lib/utils"
 import type { Ilo } from "@/lib/types"
 
@@ -44,6 +45,7 @@ function DraggableIloRow({ ilo }: { ilo: Ilo }) {
       <div className="flex-1 min-w-0">
         <IloItem
           ilo={ilo}
+          variant="course"
           onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
         />
       </div>
@@ -90,6 +92,7 @@ export function CloPage({ courseId }: Props) {
     .filter(m => m.cloId === null)
     .map(m => iloById.get(m.iloId))
     .filter((i): i is Ilo => i !== undefined)
+    .sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel))
 
   // ILOs grouped by CLO id
   const ilosByCloId = new Map<number, Ilo[]>()
@@ -100,6 +103,9 @@ export function CloPage({ courseId }: Props) {
     const arr = ilosByCloId.get(m.cloId) ?? []
     arr.push(ilo)
     ilosByCloId.set(m.cloId, arr)
+  }
+  for (const [cloId, arr] of ilosByCloId) {
+    ilosByCloId.set(cloId, arr.sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel)))
   }
 
   // Header inline-editing state
@@ -235,7 +241,7 @@ export function CloPage({ courseId }: Props) {
           {/* Course-level (unlinked) ILOs */}
           <div className="space-y-1.5">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground px-1">
-              Linked at course level
+              These ILO need to be assigned to CLO
             </h3>
             <CourseLevelDropZone isEmpty={unlinkedIlos.length === 0}>
               <div className="py-1">
@@ -254,7 +260,6 @@ export function CloPage({ courseId }: Props) {
                   key={clo.id}
                   clo={clo}
                   ilos={ilosByCloId.get(clo.id) ?? []}
-                  accentColor={course.color}
                   onDelete={() => send({ type: "clo:delete", id: clo.id })}
                 />
               ))}
