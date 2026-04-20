@@ -1,26 +1,24 @@
 import yaml from 'js-yaml'
 import type { AppState } from '@/lib/types'
 
-// ── Export ────────────────────────────────────────────────────────────────────
+// -- Export -------------------------------------------------------------------
 
 export function exportToYaml(state: AppState): void {
-  const { tlos, ilos, courseObjectives, iloCourseObjectiveMappings, trajectories, courses } = state
+  const { tlos, ilos, clos, iloCloMappings, trajectories, courses } = state
   const tloIloMappings = ilos.filter(i => i.tloId !== null).map(i => ({ tloId: i.tloId!, iloId: i.id }))
 
   const courseById = new Map(courses.map(c => [c.id, c]))
-  const coById = new Map(courseObjectives.map(co => [co.id, co]))
+  const coById = new Map(clos.map(co => [co.id, co]))
 
-  const iloCoMap = new Map<number, { course: string; name?: string }[]>()
-  for (const mapping of iloCourseObjectiveMappings) {
-    const courseName = courseById.get(mapping.courseId)?.name ?? ""
+  const iloCoMap = new Map<number, { course: string; description: string }[]>()
+  for (const mapping of iloCloMappings) {
+    if (mapping.cloId === null) continue  // course-level links have no CLO
+    const co = coById.get(mapping.cloId)
+    if (!co) continue
+    const courseName = courseById.get(co.courseId)?.name ?? ''
     if (!courseName) continue
     const arr = iloCoMap.get(mapping.iloId) ?? []
-    if (mapping.courseObjectiveId) {
-      const co = coById.get(mapping.courseObjectiveId)
-      if (co) arr.push({ course: courseName, name: co.name })
-    } else {
-      arr.push({ course: courseName })
-    }
+    arr.push({ course: courseName, description: co.description })
     iloCoMap.set(mapping.iloId, arr)
   }
 
@@ -71,9 +69,8 @@ export function exportToYaml(state: AppState): void {
 
   const doc = {
     exported: new Date().toISOString(),
-    course_objectives: courseObjectives.map(co => ({
-      course: courseById.get(co.courseId)?.name ?? "",
-      name: co.name,
+    course_objectives: clos.map(co => ({
+      course: courseById.get(co.courseId)?.name ?? '',
       description: co.description,
     })),
     trajectories: trajectoryOutput,
@@ -82,18 +79,18 @@ export function exportToYaml(state: AppState): void {
   const yamlStr = yaml.dump(doc, { lineWidth: 120, noRefs: true })
   const date = new Date().toISOString().slice(0, 10)
   const filename = `lto-export-${date}.yaml`
-  const blob = new Blob([yamlStr], { type: "text/yaml;charset=utf-8;" })
+  const blob = new Blob([yamlStr], { type: 'text/yaml;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.setAttribute("href", url)
-  link.setAttribute("download", filename)
+  const link = document.createElement('a')
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
 
-// ── Import ────────────────────────────────────────────────────────────────────
+// -- Import -------------------------------------------------------------------
 
 export function parseYamlForImport(text: string): object {
   const parsed = yaml.load(text)

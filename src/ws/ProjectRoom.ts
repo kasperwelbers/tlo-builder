@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { type Env } from '../types'
 import { getDb } from '../db'
 import { eq } from 'drizzle-orm'
-import { projects, trajectories, tlos, ilos, courseObjectives, iloCourseObjectiveMappings, courses } from '../db/schema'
+import { projects, trajectories, tlos, ilos, clos, iloCloMappings, courses, tloIloMappings } from '../db/schema'
 import { handleMessage, type SyncTable } from './handlers'
 
 export class ProjectRoom extends DurableObject<Env> {
@@ -61,7 +61,7 @@ export class ProjectRoom extends DurableObject<Env> {
     console.error('WebSocket error:', error)
   }
 
-  // ── Private helpers ─────────────────────────────────────────────────────────
+  // -- Private helpers --------------------------------------------------------
 
   private async broadcastTable(projectId: string, table: SyncTable): Promise<void> {
     const db = getDb(this.env.DB)
@@ -81,11 +81,21 @@ export class ProjectRoom extends DurableObject<Env> {
       case 'tlos':
         return db.select().from(tlos).where(eq(tlos.projectId, projectId))
       case 'ilos':
-        return db.select().from(ilos).where(eq(ilos.projectId, projectId))
-      case 'course_objectives':
-        return db.select().from(courseObjectives).where(eq(courseObjectives.projectId, projectId))
-      case 'ilo_course_objective_mappings':
-        return db.select().from(iloCourseObjectiveMappings).where(eq(iloCourseObjectiveMappings.projectId, projectId))
+        return db
+          .select({
+            id: ilos.id,
+            projectId: ilos.projectId,
+            description: ilos.description,
+            bloomLevel: ilos.bloomLevel,
+            tloId: tloIloMappings.tloId,
+          })
+          .from(ilos)
+          .leftJoin(tloIloMappings, eq(tloIloMappings.iloId, ilos.id))
+          .where(eq(ilos.projectId, projectId))
+      case 'clos':
+        return db.select().from(clos).where(eq(clos.projectId, projectId))
+      case 'ilo_clo_mappings':
+        return db.select().from(iloCloMappings).where(eq(iloCloMappings.projectId, projectId))
     }
   }
 
@@ -95,22 +105,32 @@ export class ProjectRoom extends DurableObject<Env> {
     // Ensure the project row exists
     await db.insert(projects).values({ id: projectId, name: 'Untitled Project' }).onConflictDoNothing()
 
-    const [allTrajectories, allCourses, allTlos, allIlos, allCourseObjectives, allIloCourseObjectiveMappings] = await Promise.all([
+    const [allTrajectories, allCourses, allTlos, allIlos, allClos, allIloCloMappings] = await Promise.all([
       db.select().from(trajectories).where(eq(trajectories.projectId, projectId)),
       db.select().from(courses).where(eq(courses.projectId, projectId)),
       db.select().from(tlos).where(eq(tlos.projectId, projectId)),
-      db.select().from(ilos).where(eq(ilos.projectId, projectId)),
-      db.select().from(courseObjectives).where(eq(courseObjectives.projectId, projectId)),
-      db.select().from(iloCourseObjectiveMappings).where(eq(iloCourseObjectiveMappings.projectId, projectId)),
+      db
+        .select({
+          id: ilos.id,
+          projectId: ilos.projectId,
+          description: ilos.description,
+          bloomLevel: ilos.bloomLevel,
+          tloId: tloIloMappings.tloId,
+        })
+        .from(ilos)
+        .leftJoin(tloIloMappings, eq(tloIloMappings.iloId, ilos.id))
+        .where(eq(ilos.projectId, projectId)),
+      db.select().from(clos).where(eq(clos.projectId, projectId)),
+      db.select().from(iloCloMappings).where(eq(iloCloMappings.projectId, projectId)),
     ])
 
     return {
-      trajectories:                allTrajectories,
-      courses:                     allCourses,
-      tlos:                        allTlos,
-      ilos:                        allIlos,
-      courseObjectives:            allCourseObjectives,
-      iloCourseObjectiveMappings:  allIloCourseObjectiveMappings,
+      trajectories:   allTrajectories,
+      courses:        allCourses,
+      tlos:           allTlos,
+      ilos:           allIlos,
+      clos:           allClos,
+      iloCloMappings: allIloCloMappings,
     }
   }
 }

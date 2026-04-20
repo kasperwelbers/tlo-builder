@@ -1,6 +1,5 @@
 import { useState } from "react"
-import { Plus, Pencil, Trash2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BloomSelect } from "@/components/ui/bloom-select"
@@ -11,100 +10,100 @@ import {
 } from "@/components/ui/alert-dialog"
 import { IloItem } from "./IloItem"
 import { CreateIloDialog } from "./CreateIloDialog"
-import { IloFormDialog } from "@/components/ilos/IloFormDialog"
 import { useApp } from "@/context/AppContext"
-import type { CourseObjective, Ilo, IloCourseObjectiveMapping, Tlo } from "@/lib/types"
+import type { Clo, Ilo, Tlo } from "@/lib/types"
 
 interface TloSectionProps {
   tlo: Tlo
   ilos: Ilo[]
-  courseObjectives: CourseObjective[]
-  iloCourseObjectiveMappings: IloCourseObjectiveMapping[]
+  clos: Clo[]
   onEdit: () => void
   onDelete: () => void
 }
 
-export function TloSection({
-  tlo, ilos, courseObjectives, iloCourseObjectiveMappings, onEdit, onDelete,
-}: TloSectionProps) {
-  const { send, state } = useApp()
-  const courseById = new Map(state.courses.map(c => [c.id, c]))
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editIlo, setEditIlo] = useState<Ilo | null>(null)
+export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProps) {
+  const { send } = useApp()
 
-  const [editingField, setEditingField] = useState<'name' | 'description' | null>(null)
-  const [editValue, setEditValue] = useState('')
+  const [createFromCloOpen, setCreateFromCloOpen] = useState(false)
 
-  const handleStartEdit = (field: 'name' | 'description', value: string) => {
+  const [editingField, setEditingField] = useState<"name" | "description" | null>(null)
+  const [editValue, setEditValue] = useState("")
+
+  function handleStartEdit(field: "name" | "description", value: string) {
     setEditingField(field)
     setEditValue(value)
   }
 
-  const handleSave = () => {
+  function handleSave() {
     if (!editingField) return
-
-    const isUnchanged =
-      (editingField === 'name' && editValue === tlo.name) ||
-      (editingField === 'description' && editValue === (tlo.description || ''))
-
-    if (!isUnchanged) {
+    const unchanged =
+      (editingField === "name" && editValue === tlo.name) ||
+      (editingField === "description" && editValue === (tlo.description || ""))
+    if (!unchanged) {
       send({
         type: "tlo:update",
         id: tlo.id,
         trajectoryId: tlo.trajectoryId,
-        name: editingField === 'name' ? editValue : tlo.name,
-        description: editingField === 'description' ? editValue : tlo.description,
-        bloomLevel: tlo.bloomLevel
+        name: editingField === "name" ? editValue : tlo.name,
+        description: editingField === "description" ? editValue : tlo.description,
+        bloomLevel: tlo.bloomLevel,
       })
     }
     setEditingField(null)
   }
 
-  const handleBloomChange = (val: string) => {
+  function handleBloomChange(val: string) {
     send({
       type: "tlo:update",
       id: tlo.id,
       trajectoryId: tlo.trajectoryId,
       name: tlo.name,
       description: tlo.description,
-      bloomLevel: val
+      bloomLevel: val || null,
     })
   }
 
-  const bgClass = tlo.bloomLevel?.startsWith('C') ? 'bg-blue-50' :
-                  tlo.bloomLevel?.startsWith('A') ? 'bg-green-50' :
-                  tlo.bloomLevel?.startsWith('P') ? 'bg-amber-50' : 'bg-muted/50'
+  const bgClass = tlo.bloomLevel?.startsWith("C") ? "bg-blue-50" :
+                  tlo.bloomLevel?.startsWith("A") ? "bg-green-50" :
+                  tlo.bloomLevel?.startsWith("P") ? "bg-amber-50" : "bg-muted/50"
 
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
+
       {/* TLO header */}
-      <div className={`flex items-start gap-3 px-4 py-3 group w-full text-black ${bgClass}`}>
+      <div className={"px-4 py-3 group " + bgClass}>
 
-
-        {editingField === 'name' ? (
-          <Input
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            className="text-base font-semibold w-full text-black bg-white/50"
-            autoFocus
-            onBlur={handleSave}
-            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingField(null); }}
-          />
-        ) : (
-          <div
-            role="button"
-            tabIndex={0}
-            className="text-base font-semibold cursor-pointer px-1.5 py-0.5 rounded hover:bg-black/5"
-            onClick={() => handleStartEdit('name', tlo.name)}
-          >
-            {tlo.name}
+        {/* Row 1: name + bloom select + delete button */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            {editingField === "name" ? (
+              <Input
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                className="text-base font-semibold bg-white/60 h-7 py-0"
+                autoFocus
+                onBlur={handleSave}
+                onKeyDown={e => {
+                  if (e.key === "Enter") handleSave()
+                  if (e.key === "Escape") setEditingField(null)
+                }}
+              />
+            ) : (
+              <span
+                role="button"
+                tabIndex={0}
+                className="text-base font-semibold cursor-pointer rounded px-1 hover:bg-black/5"
+                onClick={() => handleStartEdit("name", tlo.name)}
+              >
+                {tlo.name}
+              </span>
+            )}
           </div>
-        )}
-        <div className="shrink-0 opacity-90 hover:opacity-100 transition-opacity flex items-center justify-center mt-1">
-          <BloomSelect value={tlo.bloomLevel || ""} onValueChange={handleBloomChange} fullLabel />
-        </div>
 
-        <div className="shrink-0 flex items-center gap-1 mt-1">
+          <div className="shrink-0">
+            <BloomSelect value={tlo.bloomLevel || ""} onValueChange={handleBloomChange} />
+          </div>
+
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -128,28 +127,32 @@ export function TloSection({
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </div>
-      <div className="flex-1 flex flex-col min-w-[200px] justify-center gap-1">
 
-        {editingField === 'description' ? (
-          <Input
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            className="text-sm w-full text-black bg-white/50"
-            autoFocus
-            onBlur={handleSave}
-            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditingField(null); }}
-          />
-        ) : (
-          <div
-            role="button"
-            tabIndex={0}
-            className="text-sm text-black/80 cursor-pointer px-1.5 py-0.5 rounded hover:bg-black/5"
-            onClick={() => handleStartEdit('description', tlo.description || '')}
-          >
-            {tlo.description || <span className="italic opacity-50">No description</span>}
-          </div>
-        )}
+        {/* Row 2: editable description */}
+        <div className="mt-1">
+          {editingField === "description" ? (
+            <Input
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              className="text-sm bg-white/60 h-7 py-0"
+              autoFocus
+              onBlur={handleSave}
+              onKeyDown={e => {
+                if (e.key === "Enter") handleSave()
+                if (e.key === "Escape") setEditingField(null)
+              }}
+            />
+          ) : (
+            <div
+              role="button"
+              tabIndex={0}
+              className="text-sm  px-1 text-black/70 cursor-pointer rounded  hover:bg-black/5"
+              onClick={() => handleStartEdit("description", tlo.description || "")}
+            >
+              {tlo.description || <span className="italic  opacity-40">Add description...</span>}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ILOs */}
@@ -168,53 +171,27 @@ export function TloSection({
         </>
       )}
 
-      {/* Add ILO button */}
+      {/* Buttons */}
       <div className="flex flex-wrap gap-2 px-3 pb-3 pt-1">
-        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => send({ type: 'ilo:create', tloId: tlo.id, description: 'The student can ...', bloomLevel: null })}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground"
+          onClick={() => send({ type: "ilo:create", tloId: tlo.id, description: "", bloomLevel: null })}
+        >
           <Plus className="mr-1 size-3.5" /> Create ILO
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1 size-3.5" /> Create ILO from Course Objective
+        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCreateFromCloOpen(true)}>
+          <Plus className="mr-1 size-3.5" /> ILO from CLO
         </Button>
       </div>
 
+      {/* Create ILO from CLO */}
       <CreateIloDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
+        open={createFromCloOpen}
+        onOpenChange={setCreateFromCloOpen}
         tlo={tlo}
-        courseObjectives={courseObjectives}
-      />
-
-      <IloFormDialog
-        open={editIlo !== null}
-        onOpenChange={open => { if (!open) setEditIlo(null) }}
-        initialData={editIlo ?? undefined}
-        initialCoIds={
-          editIlo
-            ? iloCourseObjectiveMappings
-                .filter(m => m.iloId === editIlo.id)
-                .map(m => m.courseObjectiveId)
-            : []
-        }
-        courses={state.courses}
-        courseObjectives={courseObjectives}
-        onSubmit={data => {
-          if (!editIlo) return
-          send({ type: "ilo:update", id: editIlo.id, description: data.description, bloomLevel: data.bloomLevel })
-
-          // Sync CO mappings: diff old vs new
-          const oldIds = iloCourseObjectiveMappings
-            .filter(m => m.iloId === editIlo.id)
-            .map(m => m.courseObjectiveId)
-          const newIds = data.courseObjectiveIds
-
-          for (const coId of newIds.filter(id => !oldIds.includes(id))) {
-            send({ type: "ilo_course_objective_mapping:add", iloId: editIlo.id, courseObjectiveId: coId })
-          }
-          for (const coId of oldIds.filter(id => !newIds.includes(id))) {
-            send({ type: "ilo_course_objective_mapping:delete", iloId: editIlo.id, courseObjectiveId: coId })
-          }
-        }}
+        clos={clos}
       />
     </div>
   )

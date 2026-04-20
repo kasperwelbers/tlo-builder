@@ -2,44 +2,43 @@ import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { BloomSelect } from '@/components/ui/bloom-select'
 import { cn } from '@/lib/utils'
-import type { Course, CourseObjective, Ilo } from '@/lib/types'
+import type { Course, Clo, Ilo } from '@/lib/types'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   initialData?: Partial<Ilo>
-  initialCoIds?: number[]
+  initialCloIds?: number[]
   courses?: Course[]
-  courseObjectives?: CourseObjective[]
+  clos?: Clo[]
   onSubmit: (data: {
     description: string
     bloomLevel: string | null
-    courseObjectiveIds: number[]
+    cloIds: number[]
   }) => void
 }
 
 export function IloFormDialog({
-  open, onOpenChange, initialData, initialCoIds = [], courses = [], courseObjectives = [], onSubmit,
+  open, onOpenChange, initialData, initialCloIds = [], courses = [], clos = [], onSubmit,
 }: Props) {
-  const [description, setDescription] = useState('')
-  const [bloomLevel, setBloomLevel] = useState('')
-  const [selectedCoIds, setSelectedCoIds] = useState<Set<number>>(new Set())
+  const [description, setDescription] = useState("")
+  const [bloomLevel, setBloomLevel] = useState("")
+  const [selectedCloIds, setSelectedCloIds] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     if (open) {
-      setDescription(initialData?.description ?? '')
-      setBloomLevel(initialData?.bloomLevel ?? '')
-      setSelectedCoIds(new Set(initialCoIds))
+      setDescription(initialData?.description ?? "")
+      setBloomLevel(initialData?.bloomLevel ?? "")
+      setSelectedCloIds(new Set(initialCloIds))
     }
   }, [open]) // intentionally only on open change
 
-  function toggleCo(id: number) {
-    setSelectedCoIds(prev => {
+  function toggleClo(id: number) {
+    setSelectedCloIds(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
@@ -52,14 +51,13 @@ export function IloFormDialog({
     onSubmit({
       description: description.trim(),
       bloomLevel: bloomLevel || null,
-      courseObjectiveIds: Array.from(selectedCoIds),
+      cloIds: Array.from(selectedCloIds),
     })
     onOpenChange(false)
   }
 
-  // Group COs by course name
   const courseById = new Map(courses.map(c => [c.id, c]))
-  const courseGroups = courseObjectives.reduce<Record<string, CourseObjective[]>>((acc, co) => {
+  const courseGroups = clos.reduce<Record<string, Clo[]>>((acc, co) => {
     const name = courseById.get(co.courseId)?.name ?? String(co.courseId)
     ;(acc[name] ??= []).push(co)
     return acc
@@ -70,7 +68,7 @@ export function IloFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{initialData?.id ? 'Edit ILO' : 'Add ILO'}</DialogTitle>
+          <DialogTitle>{initialData?.id ? "Edit ILO" : "Add ILO"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -82,9 +80,9 @@ export function IloFormDialog({
             <BloomSelect value={bloomLevel} onValueChange={setBloomLevel} />
           </div>
 
-          {courseObjectives.length > 0 && (
+          {clos.length > 0 && (
             <div className="space-y-1.5">
-              <Label>Course Objectives</Label>
+              <Label>CLOs</Label>
               <div className="max-h-48 overflow-y-auto rounded-md border">
                 {courseNames.map((course, ci) => (
                   <div key={course}>
@@ -96,21 +94,21 @@ export function IloFormDialog({
                       <button
                         key={co.id}
                         type="button"
-                        onClick={() => toggleCo(co.id)}
+                        onClick={() => toggleClo(co.id)}
                         className={cn(
                           "flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
-                          selectedCoIds.has(co.id) && "bg-accent/50"
+                          selectedCloIds.has(co.id) && "bg-accent/50"
                         )}
                       >
                         <div className={cn(
                           "flex size-4 shrink-0 items-center justify-center rounded border",
-                          selectedCoIds.has(co.id)
+                          selectedCloIds.has(co.id)
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-muted-foreground/40"
                         )}>
-                          {selectedCoIds.has(co.id) && <Check className="size-3" />}
+                          {selectedCloIds.has(co.id) && <Check className="size-3" />}
                         </div>
-                        <span className="min-w-0 flex-1 leading-snug">{co.name}</span>
+                        <span className="min-w-0 flex-1 leading-snug">{co.description}</span>
                       </button>
                     ))}
                   </div>
@@ -121,7 +119,7 @@ export function IloFormDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit">{initialData?.id ? 'Save' : 'Add'}</Button>
+            <Button type="submit">{initialData?.id ? "Save" : "Add"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

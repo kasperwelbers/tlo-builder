@@ -13,10 +13,10 @@ interface BloomSelectProps {
   value: string
   onValueChange: (value: string) => void
   placeholder?: string
-  fullLabel: boolean
+  fullLabel?: boolean
 }
 
-export function BloomSelect({ value, onValueChange, placeholder = "—" , fullLabel}: BloomSelectProps) {
+export function BloomSelect({ value, onValueChange, placeholder = "—", fullLabel = false }: BloomSelectProps) {
   const selected = BLOOM_LEVELS.find(l => l.code === value)
   const label = fullLabel ? selected?.code + ' - ' + selected?.name   : selected?.code
 

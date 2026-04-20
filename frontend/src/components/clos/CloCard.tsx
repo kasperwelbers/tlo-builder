@@ -18,21 +18,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import type { CourseObjective } from '@/lib/types'
+import type { Clo } from '@/lib/types'
 
 interface Props {
-  co: CourseObjective
+  clo: Clo
   onEdit: () => void
   onDelete: () => void
 }
 
-export function CourseObjectiveCard({ co, onEdit, onDelete }: Props) {
+export function CloCard({ clo, onEdit, onDelete }: Props) {
   return (
     <Card className="py-3">
       <CardContent className="px-4">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm">{co.description || <span className="italic opacity-50">No description</span>}</p>
+            <p className="truncate text-sm">{clo.description || <span className="italic opacity-50">No description</span>}</p>
           </div>
 
           <AlertDialog>
@@ -59,9 +59,9 @@ export function CourseObjectiveCard({ co, onEdit, onDelete }: Props) {
 
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Course Objective?</AlertDialogTitle>
+                <AlertDialogTitle>Delete CLO?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete this course objective and all its mappings.
+                  This will permanently delete this CLO and all its mappings.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

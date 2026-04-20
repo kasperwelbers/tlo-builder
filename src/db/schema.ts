@@ -39,28 +39,34 @@ export const tlos = sqliteTable("tlos", {
 export const ilos = sqliteTable("ilos", {
   id:          integer("id").primaryKey({ autoIncrement: true }),
   projectId:   text("project_id").references(() => projects.id).notNull(),
-  tloId:       integer("tlo_id").references(() => tlos.id),
   description: text("description").notNull().default(""),
   bloomLevel:  text("bloom_level"),
 })
 
-export const courseObjectives = sqliteTable("course_objectives", {
+export const clos = sqliteTable("clos", {
   id:          integer("id").primaryKey({ autoIncrement: true }),
   projectId:   text("project_id").references(() => projects.id).notNull(),
   courseId:    integer("course_id").references(() => courses.id).notNull(),
   description: text("description").notNull().default(""),
+  bloomLevel:  text("bloom_level"),
 })
 
-export const iloCourseObjectiveMappings = sqliteTable("ilo_course_objective_mappings", {
-  iloId:             integer("ilo_id").references(() => ilos.id).notNull(),
-  courseId:          integer("course_id").references(() => courses.id).notNull(),
-  courseObjectiveId: integer("course_objective_id").references(() => courseObjectives.id),
-  projectId:         text("project_id").references(() => projects.id).notNull(),
-}, (t) => [primaryKey({ columns: [t.iloId, t.courseId, t.courseObjectiveId] })])
+export const tloIloMappings = sqliteTable("tlo_ilo_mappings", {
+  tloId:     integer("tlo_id").references(() => tlos.id).notNull(),
+  iloId:     integer("ilo_id").references(() => ilos.id).notNull(),
+  projectId: text("project_id").references(() => projects.id).notNull(),
+}, (t) => [primaryKey({ columns: [t.tloId, t.iloId] })])
+
+export const iloCloMappings = sqliteTable("ilo_clo_mappings", {
+  iloId:     integer("ilo_id").references(() => ilos.id).notNull(),
+  courseId:  integer("course_id").references(() => courses.id).notNull(),
+  cloId:     integer("clo_id").references(() => clos.id),   // nullable: null = course-level link
+  projectId: text("project_id").references(() => projects.id).notNull(),
+}, (t) => [primaryKey({ columns: [t.iloId, t.courseId] })])
 
 export const projectRelations = relations(projects, ({ many }) => ({
   trajectories: many(trajectories), courses: many(courses),
-  tlos: many(tlos), ilos: many(ilos), courseObjectives: many(courseObjectives),
+  tlos: many(tlos), ilos: many(ilos), clos: many(clos),
 }))
 export const trajectoryRelations = relations(trajectories, ({ one, many }) => ({
   project: one(projects, { fields: [trajectories.projectId], references: [projects.id] }),
@@ -68,26 +74,29 @@ export const trajectoryRelations = relations(trajectories, ({ one, many }) => ({
 }))
 export const courseRelations = relations(courses, ({ one, many }) => ({
   project: one(projects, { fields: [courses.projectId], references: [projects.id] }),
-  courseObjectives: many(courseObjectives),
-  iloMappings: many(iloCourseObjectiveMappings),
+  clos: many(clos),
 }))
 export const tloRelations = relations(tlos, ({ one, many }) => ({
   project:     one(projects,     { fields: [tlos.projectId],    references: [projects.id] }),
   trajectory:  one(trajectories, { fields: [tlos.trajectoryId], references: [trajectories.id] }),
-  ilos:        many(ilos),
+  iloMappings: many(tloIloMappings),
 }))
 export const iloRelations = relations(ilos, ({ one, many }) => ({
   project: one(projects, { fields: [ilos.projectId], references: [projects.id] }),
-  tlo:     one(tlos, { fields: [ilos.tloId], references: [tlos.id] }),
-  courseObjectiveMappings: many(iloCourseObjectiveMappings),
+  tloMappings: many(tloIloMappings),
+  cloMappings: many(iloCloMappings),
 }))
-export const courseObjectiveRelations = relations(courseObjectives, ({ one, many }) => ({
-  project: one(projects, { fields: [courseObjectives.projectId], references: [projects.id] }),
-  course:  one(courses,  { fields: [courseObjectives.courseId],  references: [courses.id] }),
-  iloMappings: many(iloCourseObjectiveMappings),
+export const cloRelations = relations(clos, ({ one, many }) => ({
+  project: one(projects, { fields: [clos.projectId], references: [projects.id] }),
+  course:  one(courses,  { fields: [clos.courseId],  references: [courses.id] }),
+  iloMappings: many(iloCloMappings),
 }))
-export const iloCourseObjectiveMappingRelations = relations(iloCourseObjectiveMappings, ({ one }) => ({
-  ilo:             one(ilos,             { fields: [iloCourseObjectiveMappings.iloId],             references: [ilos.id] }),
-  course:          one(courses,          { fields: [iloCourseObjectiveMappings.courseId],          references: [courses.id] }),
-  courseObjective: one(courseObjectives, { fields: [iloCourseObjectiveMappings.courseObjectiveId], references: [courseObjectives.id] }),
+export const tloIloMappingRelations = relations(tloIloMappings, ({ one }) => ({
+  tlo: one(tlos, { fields: [tloIloMappings.tloId], references: [tlos.id] }),
+  ilo: one(ilos, { fields: [tloIloMappings.iloId], references: [ilos.id] }),
+}))
+export const iloCloMappingRelations = relations(iloCloMappings, ({ one }) => ({
+  ilo:    one(ilos,    { fields: [iloCloMappings.iloId],    references: [ilos.id] }),
+  course: one(courses, { fields: [iloCloMappings.courseId], references: [courses.id] }),
+  clo:    one(clos,    { fields: [iloCloMappings.cloId],    references: [clos.id] }),
 }))

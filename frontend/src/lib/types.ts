@@ -1,58 +1,7 @@
-export interface Tlo {
-  id: number
-  projectId: string
-  trajectoryId: number
-  name: string
-  description: string
-  bloomLevel: string | null
-}
-
-export interface Ilo {
-  id: number
-  projectId: string
-  tloId: number | null
-  description: string
-  bloomLevel: string | null
-}
-
-export interface CourseObjective {
-  id: number
-  projectId: string
-  courseId: number
-  description: string
-}
-
-
-
-export interface IloCourseObjectiveMapping {
-  iloId: number
-  courseId: number
-  courseObjectiveId: number | null
-  projectId: string
-}
-
-export interface Trajectory {
-  id: number
-  projectId: string
-  name: string
-  description: string
-  color: string
-}
-
-export interface Course {
-  id: number
-  projectId: string
-  name: string
-  description: string
-  color: string
-}
-
-export interface AppState {
-  trajectories: Trajectory[]
-  tlos: Tlo[]
-  ilos: Ilo[]
-  courseObjectives: CourseObjective[]
-
-  iloCourseObjectiveMappings: IloCourseObjectiveMapping[]
-  courses: Course[]
-}
+export interface Tlo { id: number; projectId: string; trajectoryId: number; name: string; description: string; bloomLevel: string | null }
+export interface Ilo { id: number; projectId: string; tloId: number | null; description: string; bloomLevel: string | null }
+export interface Clo { id: number; projectId: string; courseId: number; description: string; bloomLevel: string | null }
+export interface IloCloMapping { iloId: number; courseId: number; cloId: number | null; projectId: string }
+export interface Trajectory { id: number; projectId: string; name: string; description: string; color: string }
+export interface Course { id: number; projectId: string; name: string; description: string; color: string }
+export interface AppState { trajectories: Trajectory[]; tlos: Tlo[]; ilos: Ilo[]; clos: Clo[]; iloCloMappings: IloCloMapping[]; courses: Course[] }
