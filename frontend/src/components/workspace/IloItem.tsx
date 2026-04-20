@@ -97,14 +97,40 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
               onClick={() => handleStartEdit(ilo.description || "")}
               onKeyDown={e => { if (e.key === "Enter") handleStartEdit(ilo.description || "") }}
             >
-              {ilo.description || <span className="italic opacity-50 font-normal">No description</span>}
+              {ilo.description || <span className="italic opacity-50 font-normal">The student can…</span>}
             </div>
           )}
         </div>
 
-        {/* Right side: course dots + link button + delete */}
+        {/* Right side: delete (hover) | badges | link */}
         <div className="shrink-0 flex items-center gap-1.5">
-          {/* Badges: course links on workspace page, TLO link on course page */}
+
+          {/* Delete (hover only) */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete this ILO and remove all its mappings.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Badge: TLO (circle) on course page, course (square) on workspace page */}
           {variant === "course" ? (() => {
             const tlo = ilo.tloId != null ? tloById.get(ilo.tloId) : null
             const trajectory = tlo ? trajectoryById.get(tlo.trajectoryId) : null
@@ -152,7 +178,7 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
             )
           })}
 
-          {/* Link button -- opens link dialog */}
+          {/* Link button (rightmost) */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -167,30 +193,6 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
             <TooltipContent side="top">Manage links</TooltipContent>
           </Tooltip>
 
-          {/* Delete */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete this ILO and remove all its mappings.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       </div>
 

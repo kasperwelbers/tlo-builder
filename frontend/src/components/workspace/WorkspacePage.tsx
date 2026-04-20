@@ -139,7 +139,7 @@ export function WorkspacePage({ trajectoryId }: Props) {
               className="mt-1 text-sm text-muted-foreground cursor-pointer rounded px-1 hover:bg-muted/50"
               onClick={() => handleStartEdit("description", trajectory.description || "")}
             >
-              {trajectory.description || <span className="italic opacity-50">Add description…</span>}
+              {trajectory.description || <span className="italic opacity-50">A brief description of this trajectory</span>}
             </p>
           )}
         </div>
@@ -183,7 +183,6 @@ export function WorkspacePage({ trajectoryId }: Props) {
       <TloFormDialog
         open={addTloOpen}
         onOpenChange={open => { if (!open) { setAddTloOpen(false); setEditTlo(null) } }}
-        trajectories={trajectories}
         initialData={editTlo ?? { trajectoryId }}
         onSubmit={data => {
           if (editTlo) {

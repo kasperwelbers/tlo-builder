@@ -1,4 +1,4 @@
-# LTO Builder
+# TLO Builder
 
 A monorepo tool for mapping Learning Trajectory Outcomes (LTOs) and Intended Learning Outcomes (ITOs) to improve curriculum alignment.
 

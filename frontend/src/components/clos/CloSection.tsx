@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { GripVertical, Trash2 } from "lucide-react"
+import { ChevronDown, GripVertical, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -57,6 +57,7 @@ export function CloSection({ clo, ilos, onDelete }: Props) {
   const { send } = useApp()
   const { isOver, setNodeRef } = useDroppable({ id: clo.id })
 
+  const [collapsed, setCollapsed] = useState(false)
   const [editingDesc, setEditingDesc] = useState(false)
   const [editValue, setEditValue] = useState("")
 
@@ -96,6 +97,15 @@ export function CloSection({ clo, ilos, onDelete }: Props) {
         className={cn("px-4 py-3 group", bgClass)}
       >
         <div className="flex items-center gap-2">
+          {/* Collapse toggle */}
+          <button
+            onClick={() => setCollapsed(c => !c)}
+            className="shrink-0 p-1.5 -m-1.5 rounded hover:bg-black/5 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            aria-label={collapsed ? "Expand" : "Collapse"}
+          >
+            <ChevronDown className={cn("size-3.5 transition-transform", collapsed && "-rotate-90")} />
+          </button>
+
           {/* Description - left side, takes remaining space */}
           <div className="flex-1 min-w-0">
             {editingDesc ? (
@@ -118,7 +128,7 @@ export function CloSection({ clo, ilos, onDelete }: Props) {
                 onClick={startEditDesc}
                 onKeyDown={e => { if (e.key === "Enter" || e.key === " ") startEditDesc() }}
               >
-                {clo.description || <span className="italic opacity-40">Add description…</span>}
+                {clo.description || <span className="italic opacity-40">The student can…</span>}
               </p>
             )}
           </div>
@@ -153,7 +163,7 @@ export function CloSection({ clo, ilos, onDelete }: Props) {
       </div>
 
       {/* ILO list */}
-      {ilos.length > 0 ? (
+      {!collapsed && (ilos.length > 0 ? (
         <>
           <Separator />
           <div className="py-1">
@@ -171,7 +181,7 @@ export function CloSection({ clo, ilos, onDelete }: Props) {
         >
           Drop ILOs here
         </div>
-      )}
+      ))}
     </div>
   )
 }

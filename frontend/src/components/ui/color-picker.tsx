@@ -7,22 +7,23 @@ import { cn } from "@/lib/utils"
 interface ColorPickerProps {
   value: string
   onChange: (color: string) => void
+  shape?: "circle" | "square"
 }
 
-export function ColorPicker({ value, onChange }: ColorPickerProps) {
+export function ColorPicker({ value, onChange, shape = "circle" }: ColorPickerProps) {
   const [open, setOpen] = useState(false)
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="size-6 rounded-full border-2 border-white ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 shrink-0"
+          className={cn("size-6 border-2 border-white ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 shrink-0", shape === "square" ? "rounded-sm" : "rounded-full")}
           style={{ backgroundColor: value || "#64748b" }}
           title="Change color"
         />
       </PopoverTrigger>
       <PopoverContent className="w-auto p-3" align="start">
-        <div className="flex flex-wrap gap-2 max-w-[200px]">
+        <div className="flex flex-wrap gap-2 max-w-50">
           {COLOR_PALETTE.map(color => (
             <button
               key={color}

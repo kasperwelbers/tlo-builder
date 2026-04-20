@@ -4,27 +4,23 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { BloomSelect } from '@/components/ui/bloom-select'
-import type { Tlo, Trajectory } from '@/lib/types'
+import type { Tlo } from '@/lib/types'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  trajectories: Trajectory[]
   initialData?: Partial<Tlo>
   onSubmit: (data: { trajectoryId: number; name: string; description: string; bloomLevel: string | null }) => void
 }
 
-export function TloFormDialog({ open, onOpenChange, trajectories, initialData, onSubmit }: Props) {
-  const [trajectoryId, setTrajectoryId] = useState<string>('')
+export function TloFormDialog({ open, onOpenChange, initialData, onSubmit }: Props) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [bloomLevel, setBloomLevel] = useState('')
 
   useEffect(() => {
     if (open) {
-      setTrajectoryId(initialData?.trajectoryId?.toString() ?? '')
       setName(initialData?.name ?? '')
       setDescription(initialData?.description ?? '')
       setBloomLevel(initialData?.bloomLevel ?? '')
@@ -33,9 +29,9 @@ export function TloFormDialog({ open, onOpenChange, trajectories, initialData, o
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!trajectoryId || !name.trim()) return
+    if (!name.trim()) return
     onSubmit({
-      trajectoryId: Number(trajectoryId),
+      trajectoryId: initialData?.trajectoryId!,
       name: name.trim(),
       description: description.trim(),
       bloomLevel: bloomLevel || null,
@@ -50,26 +46,13 @@ export function TloFormDialog({ open, onOpenChange, trajectories, initialData, o
           <DialogTitle>{initialData?.id ? 'Edit TLO' : 'Add TLO'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Trajectory</Label>
-            <Select value={trajectoryId} onValueChange={setTrajectoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select trajectory" />
-              </SelectTrigger>
-              <SelectContent>
-                {trajectories.map(t => (
-                  <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
+<div className="space-y-1.5">
             <Label>Name</Label>
             <Input value={name} onChange={e => setName(e.target.value)} placeholder="TLO name" required autoFocus />
           </div>
           <div className="space-y-1.5">
-            <Label>Description</Label>
-            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" rows={3} />
+            <Label>Outcome statement</Label>
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="The student can…" rows={3} />
           </div>
           <div className="space-y-1.5">
             <Label>Bloom Level</Label>
@@ -77,7 +60,7 @@ export function TloFormDialog({ open, onOpenChange, trajectories, initialData, o
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={!trajectoryId}>{initialData?.id ? 'Save' : 'Add'}</Button>
+            <Button type="submit">{initialData?.id ? 'Save' : 'Add'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -62,7 +62,7 @@ function CourseLevelDropZone({ children, isEmpty }: { children: React.ReactNode;
       className={cn(
         "rounded-lg border border-dashed transition-all",
         isOver && "border-primary/60 bg-primary/5 ring-2 ring-primary/30 ring-offset-1",
-        isEmpty ? "p-4 min-h-[64px] flex items-center justify-center" : "p-2"
+        isEmpty ? "p-4 min-h-16 flex items-center justify-center" : "p-2"
       )}
     >
       {isEmpty ? (
@@ -156,7 +156,7 @@ export function CloPage({ courseId }: Props) {
       <div className="space-y-2">
         {/* Action row */}
         <div className="flex items-center justify-end gap-2">
-          <ColorPicker value={course.color} onChange={handleColorChange} />
+          <ColorPicker value={course.color} onChange={handleColorChange} shape="square" />
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
@@ -225,7 +225,7 @@ export function CloPage({ courseId }: Props) {
               className="mt-1 text-sm text-muted-foreground cursor-pointer rounded px-1 hover:bg-muted/50"
               onClick={() => handleStartEdit("description", course.description || "")}
             >
-              {course.description || <span className="italic opacity-50">Add description…</span>}
+              {course.description || <span className="italic opacity-50">A brief description of this course</span>}
             </p>
           )}
         </div>
@@ -292,7 +292,6 @@ export function CloPage({ courseId }: Props) {
       <CloFormDialog
         open={cloDialogOpen}
         onOpenChange={open => setCloDialogOpen(open)}
-        courses={state.courses}
         initialData={{ courseId }}
         onSubmit={data => {
           send({ type: "clo:add", ...data })

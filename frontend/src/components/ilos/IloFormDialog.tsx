@@ -72,8 +72,8 @@ export function IloFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Description</Label>
-            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" rows={3} required autoFocus />
+            <Label>Intended Learning Outcome</Label>
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="The student can…" rows={3} required autoFocus />
           </div>
           <div className="space-y-1.5">
             <Label>Bloom Level</Label>

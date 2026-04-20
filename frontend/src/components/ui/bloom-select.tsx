@@ -6,6 +6,7 @@ import {
   DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuPortal, DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu"
 import { BLOOM_LEVELS, BLOOM_CATEGORIES } from "@/lib/bloomLevels"
+import { useHelp } from "@/context/HelpContext"
 import { bloomBadgeClass } from "@/lib/bloomColors"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +18,7 @@ interface BloomSelectProps {
 }
 
 export function BloomSelect({ value, onValueChange, placeholder = "—", fullLabel = false }: BloomSelectProps) {
+  const { openHelp } = useHelp()
   const selected = BLOOM_LEVELS.find(l => l.code === value)
   const label = fullLabel ? selected?.code + ' - ' + selected?.name   : selected?.code
 
@@ -40,17 +42,6 @@ export function BloomSelect({ value, onValueChange, placeholder = "—", fullLab
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-56" align="start">
-        {/* None option */}
-        <DropdownMenuItem
-          onClick={() => onValueChange("")}
-          className="gap-2"
-        >
-          <Check className={cn("size-4", value === "" ? "opacity-100" : "opacity-0")} />
-          <span className="text-muted-foreground">None</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
         <DropdownMenuGroup>
           {BLOOM_CATEGORIES.map((cat) => (
             <DropdownMenuSub key={cat.key}>
@@ -63,18 +54,13 @@ export function BloomSelect({ value, onValueChange, placeholder = "—", fullLab
                     <DropdownMenuItem
                       key={level.code}
                       onClick={() => onValueChange(level.code)}
-                      className="flex-col items-start gap-1 p-2"
+                      className="gap-2"
                     >
-                      <div className="flex items-center gap-2 w-full">
-                        <Check className={cn("size-4 shrink-0", value === level.code ? "opacity-100" : "opacity-0")} />
-                        <span className="font-medium">
-                          <span className="font-mono text-xs">{level.code}</span>
-                          {"  "}{level.name}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground pl-6 whitespace-normal leading-relaxed">
-                        {level.description}
-                      </p>
+                      <Check className={cn("size-4 shrink-0", value === level.code ? "opacity-100" : "opacity-0")} />
+                      <span className="font-medium">
+                        <span className="font-mono text-xs">{level.code}</span>
+                        {"  "}{level.name}
+                      </span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -82,6 +68,22 @@ export function BloomSelect({ value, onValueChange, placeholder = "—", fullLab
             </DropdownMenuSub>
           ))}
         </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+        {selected && (
+          <DropdownMenuItem
+            onClick={() => onValueChange("")}
+            className="text-muted-foreground"
+          >
+            Clear level
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          className="text-muted-foreground text-xs"
+          onClick={() => openHelp("bloom")}
+        >
+          View Bloom reference →
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

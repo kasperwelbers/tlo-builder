@@ -8,7 +8,7 @@ const app = new Hono<{ Bindings: Env }>()
 
 app.use('*', cors())
 
-app.get('/', (c) => c.text('LTO Builder API'))
+app.get('/', (c) => c.text('TLO Builder API'))
 
 app.get('/ws/:projectId', async (c) => {
   const projectId = c.req.param('projectId')

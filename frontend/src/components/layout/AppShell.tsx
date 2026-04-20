@@ -151,9 +151,9 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                   const isActive = currentPage?.type === "trajectory" && currentPage.id === t.id
                   const btnClass = cn(
                     "flex w-full items-center rounded-md transition-colors",
-                    collapsed ? "justify-center py-2" : "gap-2 px-2 py-1.5 text-sm text-left",
+                    collapsed ? "justify-center py-2" : "gap-2 px-2 py-1.5 text-xs text-left",
                     isActive
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-black text-white font-medium"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )
                   const badge = <OrderBadge num={i + 1} color={t.color} shape="circle" />
@@ -217,9 +217,9 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                   const isActive = currentPage?.type === "course" && currentPage.id === c.id
                   const btnClass = cn(
                     "flex w-full items-center rounded-md transition-colors",
-                    collapsed ? "justify-center py-2" : "gap-2 px-2 py-1.5 text-sm text-left",
+                    collapsed ? "justify-center py-2" : "gap-2 px-2 py-1.5 text-xs text-left",
                     isActive
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-black text-white font-medium"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )
                   const badge = <OrderBadge num={i + 1} color={c.color} shape="square" />
@@ -308,7 +308,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                 <Textarea
                   value={newTrajDescription}
                   onChange={e => setNewTrajDescription(e.target.value)}
-                  placeholder="Optional description"
+                  placeholder="A brief description of this trajectory"
                   rows={2}
                 />
               </div>
@@ -346,7 +346,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                 <Textarea
                   value={newCourseDescription}
                   onChange={e => setNewCourseDescription(e.target.value)}
-                  placeholder="Optional description"
+                  placeholder="A brief description of this course"
                   rows={2}
                 />
               </div>

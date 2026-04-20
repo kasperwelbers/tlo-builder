@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { ChevronDown, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BloomSelect } from "@/components/ui/bloom-select"
@@ -11,6 +11,7 @@ import {
 import { IloItem } from "./IloItem"
 import { CreateIloDialog } from "./CreateIloDialog"
 import { useApp } from "@/context/AppContext"
+import { cn } from "@/lib/utils"
 import type { Clo, Ilo, Tlo } from "@/lib/types"
 
 interface TloSectionProps {
@@ -24,6 +25,7 @@ interface TloSectionProps {
 export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProps) {
   const { send } = useApp()
 
+  const [collapsed, setCollapsed] = useState(false)
   const [createFromCloOpen, setCreateFromCloOpen] = useState(false)
 
   const [editingField, setEditingField] = useState<"name" | "description" | null>(null)
@@ -73,8 +75,16 @@ export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProp
       {/* TLO header */}
       <div className={"px-4 py-3 group " + bgClass}>
 
-        {/* Row 1: name + bloom select + delete button */}
+        {/* Row 1: collapse toggle + name + bloom select + delete button */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCollapsed(c => !c)}
+            className="shrink-0 p-1.5 -m-1.5 rounded hover:bg-black/5 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            aria-label={collapsed ? "Expand" : "Collapse"}
+          >
+            <ChevronDown className={cn("size-4 transition-transform", collapsed && "-rotate-90")} />
+          </button>
+
           <div className="flex-1 min-w-0">
             {editingField === "name" ? (
               <Input
@@ -149,42 +159,46 @@ export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProp
               className="text-sm  px-1 text-black/70 cursor-pointer rounded  hover:bg-black/5"
               onClick={() => handleStartEdit("description", tlo.description || "")}
             >
-              {tlo.description || <span className="italic  opacity-40">Add description...</span>}
+              {tlo.description || <span className="italic  opacity-40">The student can…</span>}
             </div>
           )}
         </div>
       </div>
 
-      {/* ILOs */}
-      {ilos.length > 0 && (
+      {!collapsed && (
         <>
-          <Separator />
-          <div className="py-1">
-            {ilos.map(ilo => (
-              <IloItem
-                key={ilo.id}
-                ilo={ilo}
-                onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
-              />
-            ))}
+          {/* ILOs */}
+          {ilos.length > 0 && (
+            <>
+              <Separator />
+              <div className="py-1">
+                {ilos.map(ilo => (
+                  <IloItem
+                    key={ilo.id}
+                    ilo={ilo}
+                    onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Buttons */}
+          <div className="flex flex-wrap gap-2 px-3 pb-3 pt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() => send({ type: "ilo:create", tloId: tlo.id, description: "", bloomLevel: null })}
+            >
+              <Plus className="mr-1 size-3.5" /> Create ILO
+            </Button>
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCreateFromCloOpen(true)}>
+              <Plus className="mr-1 size-3.5" /> ILO from CLO
+            </Button>
           </div>
         </>
       )}
-
-      {/* Buttons */}
-      <div className="flex flex-wrap gap-2 px-3 pb-3 pt-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          onClick={() => send({ type: "ilo:create", tloId: tlo.id, description: "", bloomLevel: null })}
-        >
-          <Plus className="mr-1 size-3.5" /> Create ILO
-        </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setCreateFromCloOpen(true)}>
-          <Plus className="mr-1 size-3.5" /> ILO from CLO
-        </Button>
-      </div>
 
       {/* Create ILO from CLO */}
       <CreateIloDialog
