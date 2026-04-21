@@ -8,7 +8,8 @@ CREATE TABLE `trajectories` (
   `project_id` text NOT NULL REFERENCES `projects`(`id`),
   `name` text NOT NULL,
   `description` text NOT NULL DEFAULT '',
-  `color` text NOT NULL DEFAULT ''
+  `color` text NOT NULL DEFAULT '',
+  `coordinator` text
 );
 CREATE UNIQUE INDEX `trajectories_project_name_idx` ON `trajectories` (`project_id`, `name`);
 CREATE TABLE `courses` (
@@ -16,7 +17,10 @@ CREATE TABLE `courses` (
   `project_id` text NOT NULL REFERENCES `projects`(`id`),
   `name` text NOT NULL,
   `description` text NOT NULL DEFAULT '',
-  `color` text NOT NULL DEFAULT ''
+  `color` text NOT NULL DEFAULT '',
+  `coordinator` text,
+  `start` text,
+  `end` text
 );
 CREATE UNIQUE INDEX `courses_project_name_idx` ON `courses` (`project_id`, `name`);
 CREATE TABLE `tlos` (
@@ -37,7 +41,8 @@ CREATE TABLE `clos` (
   `id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
   `project_id` text NOT NULL REFERENCES `projects`(`id`),
   `course_id` integer NOT NULL REFERENCES `courses`(`id`),
-  `description` text NOT NULL DEFAULT ''
+  `description` text NOT NULL DEFAULT '',
+  `bloom_level` text
 );
 CREATE TABLE `tlo_ilo_mappings` (
   `tlo_id` integer NOT NULL REFERENCES `tlos`(`id`),

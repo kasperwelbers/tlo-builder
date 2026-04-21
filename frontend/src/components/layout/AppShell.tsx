@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Plus, PanelLeftClose, PanelLeftOpen, HelpCircle } from 'lucide-react'
+import { Plus, PanelLeftClose, PanelLeftOpen, HelpCircle, Sheet, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,8 +15,9 @@ import { useApp } from '@/context/AppContext'
 import { useHelp } from '@/context/HelpContext'
 import { randomColor } from '@/lib/colorPalette'
 import { YamlActions } from '@/components/YamlActions'
+import { BulkImportCoursesDialog } from '@/components/BulkImportCoursesDialog'
 
-export type Page = { type: "trajectory"; id: number } | { type: "course"; id: number }
+export type Page = { type: "trajectory"; id: number } | { type: "course"; id: number } | { type: "overview" }
 
 interface AppShellProps {
   currentPage: Page | null
@@ -29,6 +30,11 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
   const { state, send } = useApp()
   const [collapsed, setCollapsed] = useState(false)
   const { openHelp } = useHelp()
+
+  function handleNavigateOverview() {
+    onNavigate({ type: "overview" })
+    if (window.innerWidth < 768) setCollapsed(true)
+  }
 
   const trajectories = useMemo(
     () => [...state.trajectories].sort((a, b) => a.name.localeCompare(b.name)),
@@ -52,38 +58,63 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
   const [newTrajName, setNewTrajName] = useState("")
   const [newTrajDescription, setNewTrajDescription] = useState("")
   const [newTrajColor, setNewTrajColor] = useState("")
+  const [newTrajCoordinator, setNewTrajCoordinator] = useState("")
 
   function openAddTrajectory() {
     setNewTrajName("")
     setNewTrajDescription("")
     setNewTrajColor(randomColor())
+    setNewTrajCoordinator("")
     setAddTrajOpen(true)
   }
 
   function submitAddTrajectory() {
     const name = newTrajName.trim()
     if (!name) return
-    send({ type: "trajectory:create", name, description: newTrajDescription.trim(), color: newTrajColor })
+    send({
+      type: "trajectory:create",
+      name,
+      description: newTrajDescription.trim(),
+      color: newTrajColor,
+      coordinator: newTrajCoordinator.trim() || null,
+    })
     setAddTrajOpen(false)
   }
+
+  // Bulk import courses dialog
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
 
   // Add Course dialog
   const [addCourseOpen, setAddCourseOpen] = useState(false)
   const [newCourseName, setNewCourseName] = useState("")
   const [newCourseDescription, setNewCourseDescription] = useState("")
   const [newCourseColor, setNewCourseColor] = useState("")
+  const [newCourseCoordinator, setNewCourseCoordinator] = useState("")
+  const [newCourseStart, setNewCourseStart] = useState("")
+  const [newCourseEnd, setNewCourseEnd] = useState("")
 
   function openAddCourse() {
     setNewCourseName("")
     setNewCourseDescription("")
     setNewCourseColor(randomColor())
+    setNewCourseCoordinator("")
+    setNewCourseStart("")
+    setNewCourseEnd("")
     setAddCourseOpen(true)
   }
 
   function submitAddCourse() {
     const name = newCourseName.trim()
     if (!name) return
-    send({ type: "course:create", name, description: newCourseDescription.trim(), color: newCourseColor })
+    send({
+      type: "course:create",
+      name,
+      description: newCourseDescription.trim(),
+      color: newCourseColor,
+      coordinator: newCourseCoordinator.trim() || null,
+      start: newCourseStart.trim() || null,
+      end: newCourseEnd.trim() || null,
+    })
     setAddCourseOpen(false)
   }
 
@@ -125,6 +156,46 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Overview */}
+            <div className={cn("pt-3 pb-1", collapsed ? "px-1.5" : "px-3")}>
+              {collapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleNavigateOverview}
+                      className={cn(
+                        "flex w-full items-center justify-center rounded-md py-2 transition-colors",
+                        currentPage?.type === "overview"
+                          ? "bg-black text-white"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <LayoutGrid className="size-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Overview</TooltipContent>
+                </Tooltip>
+              ) : (
+                <button
+                  onClick={handleNavigateOverview}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                    currentPage?.type === "overview"
+                      ? "bg-black text-white font-medium"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <LayoutGrid className="size-3.5 shrink-0" />
+                  Overview
+                </button>
+              )}
+            </div>
+
+            {collapsed
+              ? <div className="my-1 mx-1.5 border-t" />
+              : <Separator className="my-2" />
+            }
+
             {/* Trajectories */}
             <div className={cn("pt-4 pb-1", collapsed ? "px-1.5" : "px-3")}>
               {!collapsed && (
@@ -198,15 +269,26 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Courses
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-5 text-muted-foreground hover:text-foreground"
-                    onClick={openAddCourse}
-                    title="Add course"
-                  >
-                    <Plus className="size-3" />
-                  </Button>
+                  <div className="flex items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-5 text-muted-foreground hover:text-foreground"
+                      onClick={() => setBulkImportOpen(true)}
+                      title="Bulk import courses"
+                    >
+                      <Sheet className="size-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-5 text-muted-foreground hover:text-foreground"
+                      onClick={openAddCourse}
+                      title="Add course"
+                    >
+                      <Plus className="size-3" />
+                    </Button>
+                  </div>
                 </div>
               )}
               <div className="space-y-0.5">
@@ -313,6 +395,14 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                 />
               </div>
               <div className="space-y-1.5">
+                <Label>Coordinator <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Input
+                  value={newTrajCoordinator}
+                  onChange={e => setNewTrajCoordinator(e.target.value)}
+                  placeholder="e.g. Dr. Smith"
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label>Color</Label>
                 <ColorPicker value={newTrajColor} onChange={setNewTrajColor} />
               </div>
@@ -323,6 +413,9 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Bulk Import Courses Dialog */}
+        <BulkImportCoursesDialog open={bulkImportOpen} onOpenChange={setBulkImportOpen} />
 
         {/* Add Course Dialog */}
         <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>
@@ -349,6 +442,32 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                   placeholder="A brief description of this course"
                   rows={2}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Coordinator <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Input
+                  value={newCourseCoordinator}
+                  onChange={e => setNewCourseCoordinator(e.target.value)}
+                  placeholder="e.g. Dr. Smith"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Start <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input
+                    value={newCourseStart}
+                    onChange={e => setNewCourseStart(e.target.value)}
+                    placeholder="e.g. 2-1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>End <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input
+                    value={newCourseEnd}
+                    onChange={e => setNewCourseEnd(e.target.value)}
+                    placeholder="e.g. 2-4"
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>Color</Label>

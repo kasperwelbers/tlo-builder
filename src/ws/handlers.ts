@@ -12,12 +12,13 @@ async function createTrajectory(db: DB, data: any) {
   await db.insert(trajectories).values({
     projectId: data.projectId, name: data.name,
     description: data.description ?? '', color: data.color ?? '',
+    coordinator: data.coordinator ?? null,
   }).onConflictDoNothing()
 }
 
 async function updateTrajectory(db: DB, data: any) {
   await db.update(trajectories)
-    .set({ name: data.newName, description: data.description, color: data.color })
+    .set({ name: data.newName ?? data.name, description: data.description, color: data.color, coordinator: data.coordinator ?? null })
     .where(and(eq(trajectories.id, data.trajectoryId), eq(trajectories.projectId, data.projectId)))
 }
 
@@ -85,12 +86,13 @@ async function createCourse(db: DB, data: any) {
   await db.insert(courses).values({
     projectId: data.projectId, name: data.name,
     description: data.description ?? '', color: data.color ?? '',
+    coordinator: data.coordinator ?? null, start: data.start ?? null, end: data.end ?? null,
   }).onConflictDoNothing()
 }
 
 async function updateCourse(db: DB, data: any) {
   await db.update(courses)
-    .set({ name: data.newName, description: data.description, color: data.color })
+    .set({ name: data.newName ?? data.name, description: data.description, color: data.color, coordinator: data.coordinator ?? null, start: data.start ?? null, end: data.end ?? null })
     .where(and(eq(courses.id, data.courseId), eq(courses.projectId, data.projectId)))
 }
 
@@ -251,8 +253,8 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     return row.id
   }
 
-  async function upsertCourse(name: string, description = '', color = ''): Promise<number> {
-    await db.insert(courses).values({ projectId, name, description, color }).onConflictDoNothing()
+  async function upsertCourse(name: string, description = '', color = '', coordinator?: string, start?: string, end?: string): Promise<number> {
+    await db.insert(courses).values({ projectId, name, description, color, coordinator: coordinator ?? null, start: start ?? null, end: end ?? null }).onConflictDoNothing()
     const [row] = await db.select({ id: courses.id }).from(courses)
       .where(and(eq(courses.projectId, projectId), eq(courses.name, name)))
     return row.id

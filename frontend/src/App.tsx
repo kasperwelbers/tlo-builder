@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/AppShell"
 import type { Page } from "@/components/layout/AppShell"
 import { WorkspacePage } from "@/components/workspace/WorkspacePage"
 import { CloPage } from "@/components/clos/CloPage"
+import { OverviewPage } from "@/components/overview/OverviewPage"
 import { Toaster } from "@/components/ui/sonner"
 
 function getProjectId() {
@@ -56,6 +57,7 @@ function Inner() {
       <AppShell currentPage={page} onNavigate={setPage} connected={connected}>
         {page?.type === "trajectory" && <WorkspacePage trajectoryId={page.id} />}
         {page?.type === "course" && <CloPage courseId={page.id} />}
+        {page?.type === "overview" && <OverviewPage />}
         {page === null && (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <p>Select a trajectory or course from the sidebar to get started.</p>

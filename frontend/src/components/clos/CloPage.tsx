@@ -108,7 +108,7 @@ export function CloPage({ courseId }: Props) {
   }
 
   // Header inline-editing state
-  const [editingField, setEditingField] = useState<"name" | "description" | null>(null)
+  const [editingField, setEditingField] = useState<"name" | "description" | "coordinator" | "start" | "end" | null>(null)
   const [editValue, setEditValue] = useState("")
 
   // CLO dialog
@@ -120,7 +120,7 @@ export function CloPage({ courseId }: Props) {
 
   if (!course) return null
 
-  function handleStartEdit(field: "name" | "description", value: string) {
+  function handleStartEdit(field: "name" | "description" | "coordinator" | "start" | "end", value: string) {
     setEditingField(field)
     setEditValue(value)
   }
@@ -133,12 +133,24 @@ export function CloPage({ courseId }: Props) {
       name: editingField === "name" ? editValue : course!.name,
       description: editingField === "description" ? editValue : course!.description,
       color: course!.color,
+      coordinator: editingField === "coordinator" ? (editValue.trim() || null) : course!.coordinator,
+      start: editingField === "start" ? (editValue.trim() || null) : course!.start,
+      end: editingField === "end" ? (editValue.trim() || null) : course!.end,
     })
     setEditingField(null)
   }
 
   function handleColorChange(color: string) {
-    send({ type: "course:update", courseId: course!.id, name: course!.name, description: course!.description, color })
+    send({
+      type: "course:update",
+      courseId: course!.id,
+      name: course!.name,
+      description: course!.description,
+      color,
+      coordinator: course!.coordinator,
+      start: course!.start,
+      end: course!.end,
+    })
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -227,6 +239,92 @@ export function CloPage({ courseId }: Props) {
               {course.description || <span className="italic opacity-50">A brief description of this course</span>}
             </p>
           )}
+
+          {/* Coordinator / Start / End meta row */}
+          <div className="mt-2 flex flex-wrap gap-4">
+            {/* Coordinator */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="font-medium shrink-0">Coordinator:</span>
+              {editingField === "coordinator" ? (
+                <Input
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  className="h-6 w-40 border-0 px-1 text-xs focus-visible:ring-1"
+                  autoFocus
+                  onBlur={handleSave}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") handleSave()
+                    if (e.key === "Escape") setEditingField(null)
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  onClick={() => handleStartEdit("coordinator", course.coordinator || "")}
+                >
+                  {course.coordinator || <span className="italic opacity-50">—</span>}
+                </span>
+              )}
+            </div>
+
+            {/* Start */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="font-medium shrink-0">Start:</span>
+              {editingField === "start" ? (
+                <Input
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  className="h-6 w-20 border-0 px-1 text-xs focus-visible:ring-1"
+                  autoFocus
+                  placeholder="e.g. 2-1"
+                  onBlur={handleSave}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") handleSave()
+                    if (e.key === "Escape") setEditingField(null)
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  onClick={() => handleStartEdit("start", course.start || "")}
+                >
+                  {course.start || <span className="italic opacity-50">—</span>}
+                </span>
+              )}
+            </div>
+
+            {/* End */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="font-medium shrink-0">End:</span>
+              {editingField === "end" ? (
+                <Input
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  className="h-6 w-20 border-0 px-1 text-xs focus-visible:ring-1"
+                  autoFocus
+                  placeholder="e.g. 2-4"
+                  onBlur={handleSave}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") handleSave()
+                    if (e.key === "Escape") setEditingField(null)
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  onClick={() => handleStartEdit("end", course.end || "")}
+                >
+                  {course.end || <span className="italic opacity-50">—</span>}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

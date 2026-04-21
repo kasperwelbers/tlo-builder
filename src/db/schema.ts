@@ -13,6 +13,7 @@ export const trajectories = sqliteTable("trajectories", {
   name:        text("name").notNull(),
   description: text("description").notNull().default(""),
   color:       text("color").notNull().default(""),
+  coordinator: text("coordinator"),
 }, (t) => [
   uniqueIndex("trajectories_project_name_idx").on(t.projectId, t.name),
 ])
@@ -23,6 +24,9 @@ export const courses = sqliteTable("courses", {
   name:        text("name").notNull(),
   description: text("description").notNull().default(""),
   color:       text("color").notNull().default(""),
+  coordinator: text("coordinator"),
+  start:       text("start"),
+  end:         text("end"),
 }, (t) => [
   uniqueIndex("courses_project_name_idx").on(t.projectId, t.name),
 ])
