@@ -63,12 +63,26 @@ export function exportToYaml(state: AppState): void {
       const out: Record<string, unknown> = { name: traj.name }
       if (traj.description) out.description = traj.description
       if (traj.color) out.color = traj.color
+      if (traj.coordinator) out.coordinator = traj.coordinator
       out.tlos = tloEntries
       return out
     })
 
+  const coursesOutput = [...courses]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(c => {
+      const entry: Record<string, unknown> = { name: c.name }
+      if (c.description) entry.description = c.description
+      if (c.color) entry.color = c.color
+      if (c.coordinator) entry.coordinator = c.coordinator
+      if (c.start) entry.start = c.start
+      if (c.end) entry.end = c.end
+      return entry
+    })
+
   const doc = {
     exported: new Date().toISOString(),
+    courses: coursesOutput,
     course_objectives: clos.map(co => ({
       course: courseById.get(co.courseId)?.name ?? '',
       description: co.description,
@@ -78,7 +92,7 @@ export function exportToYaml(state: AppState): void {
 
   const yamlStr = yaml.dump(doc, { lineWidth: 120, noRefs: true })
   const date = new Date().toISOString().slice(0, 10)
-  const filename = `lto-export-${date}.yaml`
+  const filename = `tlo-export-${date}.yaml`
   const blob = new Blob([yamlStr], { type: 'text/yaml;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')

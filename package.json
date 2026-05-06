@@ -1,12 +1,13 @@
 {
-  "name": "lto-builder",
+  "name": "tlo-builder",
   "version": "0.0.1",
   "private": true,
   "scripts": {
     "dev": "concurrently -n worker,vite -c blue,green \"wrangler dev\" \"vite\"",
     "build": "vite build",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "wrangler d1 migrations apply lto-builder --local",
+    "db:migrate": "wrangler d1 migrations apply tlo-builder --local",
+    "db:migrate:remote": "wrangler d1 migrations apply tlo-builder --remote",
     "deploy": "pnpm run build && wrangler deploy"
   },
   "dependencies": {

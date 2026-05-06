@@ -199,6 +199,8 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
     case 'ilo_clo_mapping:add':    await addIloCloMapping(db, data);    return ['ilo_clo_mappings']
     case 'ilo_clo_mapping:delete': await deleteIloCloMapping(db, data); return ['ilo_clo_mappings']
 
+    case 'course:bulk_create': return bulkCreateCourses(db, data)
+
     case 'import:all': return importAll(db, data)
 
     default:
@@ -242,12 +244,62 @@ export async function addIloWithLinks(db: DB, data: any): Promise<SyncTable[]> {
 
 // -- Bulk import --------------------------------------------------------------
 
+async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
+  const projectId = data.projectId
+  const courseList = (data.courses ?? []) as Array<{
+    name: string
+    description?: string
+    color?: string
+    coordinator?: string | null
+    start?: string | null
+    end?: string | null
+    clos?: string[]
+  }>
+
+  for (const courseData of courseList) {
+    const name = (courseData.name ?? '').trim()
+    if (!name) continue
+
+    // Create if not exists (unique by project + name)
+    await db.insert(courses).values({
+      projectId,
+      name,
+      description: courseData.description ?? '',
+      color: courseData.color ?? '',
+      coordinator: courseData.coordinator ?? null,
+      start: courseData.start ?? null,
+      end: courseData.end ?? null,
+    }).onConflictDoNothing()
+
+    // Resolve the course ID (whether freshly created or already existing)
+    const [courseRow] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(and(eq(courses.projectId, projectId), eq(courses.name, name)))
+
+    if (!courseRow) continue
+
+    for (const cloDesc of courseData.clos ?? []) {
+      const desc = (cloDesc ?? '').trim()
+      if (!desc) continue
+      await db.insert(clos).values({
+        projectId,
+        courseId: courseRow.id,
+        description: desc,
+        bloomLevel: null,
+      })
+    }
+  }
+
+  return ['courses', 'clos']
+}
+
 async function importAll(db: DB, data: any): Promise<SyncTable[]> {
   const projectId = data.projectId
   const payload = data.data as any
 
-  async function upsertTrajectory(name: string, description = '', color = ''): Promise<number> {
-    await db.insert(trajectories).values({ projectId, name, description, color }).onConflictDoNothing()
+  async function upsertTrajectory(name: string, description = '', color = '', coordinator?: string): Promise<number> {
+    await db.insert(trajectories).values({ projectId, name, description, color, coordinator: coordinator ?? null }).onConflictDoNothing()
     const [row] = await db.select({ id: trajectories.id }).from(trajectories)
       .where(and(eq(trajectories.projectId, projectId), eq(trajectories.name, name)))
     return row.id
@@ -260,9 +312,19 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     return row.id
   }
 
-  const uniqueCourseNames = [...new Set<string>((payload.course_objectives ?? []).map((c: any) => c.course as string))]
+  // 1. Upsert courses from the dedicated courses section (preserves color, coordinator, etc.)
   const courseNameToId = new Map<string, number>()
-  for (const name of uniqueCourseNames) courseNameToId.set(name, await upsertCourse(name))
+  for (const courseData of payload.courses ?? []) {
+    const name = (courseData.name ?? '').trim()
+    if (!name) continue
+    courseNameToId.set(name, await upsertCourse(name, courseData.description, courseData.color, courseData.coordinator, courseData.start, courseData.end))
+  }
+
+  // 2. Also create any courses referenced only in course_objectives (name-only fallback)
+  const uniqueCourseNames = [...new Set<string>((payload.course_objectives ?? []).map((c: any) => c.course as string))]
+  for (const name of uniqueCourseNames) {
+    if (!courseNameToId.has(name)) courseNameToId.set(name, await upsertCourse(name))
+  }
 
   // Key CLOs by course+description since there is no name field
   const coMap = new Map<string, number>()
@@ -275,7 +337,7 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
   }
 
   for (const traj of payload.trajectories ?? []) {
-    const trajectoryId = await upsertTrajectory(traj.name, traj.description, traj.color)
+    const trajectoryId = await upsertTrajectory(traj.name, traj.description, traj.color, traj.coordinator)
     for (const tloData of traj.tlos ?? []) {
       const [newTlo] = await db.insert(tlos).values({
         projectId, trajectoryId, name: tloData.name,

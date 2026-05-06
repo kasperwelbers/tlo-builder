@@ -7,15 +7,26 @@ import type { Page } from "@/components/layout/AppShell"
 import { WorkspacePage } from "@/components/workspace/WorkspacePage"
 import { CloPage } from "@/components/clos/CloPage"
 import { OverviewPage } from "@/components/overview/OverviewPage"
+import { LandingPage } from "@/components/LandingPage"
 import { Toaster } from "@/components/ui/sonner"
 
-function getProjectId() {
-  let id = localStorage.getItem("lto_project_id")
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem("lto_project_id", id) }
-  return id
+// ---------------------------------------------------------------------------
+// URL routing helpers
+// ---------------------------------------------------------------------------
+
+function getProjectIdFromUrl(): string | null {
+  const match = window.location.pathname.match(/^\/project\/([^/]+)\/?$/)
+  return match ? match[1] : null
 }
 
-const PROJECT_ID = getProjectId()
+function navigateTo(path: string) {
+  window.history.pushState({}, '', path)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+}
+
+// ---------------------------------------------------------------------------
+// Project app (shown when a project ID is present in the URL)
+// ---------------------------------------------------------------------------
 
 function Inner() {
   const { state, connected } = useApp()
@@ -23,14 +34,12 @@ function Inner() {
 
   useEffect(() => {
     setPage(prev => {
-      // Auto-select first trajectory when none selected
       if (prev === null) {
         if (state.trajectories.length > 0) {
           return { type: "trajectory", id: state.trajectories[0].id }
         }
         return prev
       }
-      // Fallback if selected trajectory was deleted
       if (prev.type === "trajectory") {
         const exists = state.trajectories.some(t => t.id === prev.id)
         if (!exists) {
@@ -39,7 +48,6 @@ function Inner() {
             : null
         }
       }
-      // Fallback if selected course was deleted
       if (prev.type === "course") {
         const exists = state.courses.some(c => c.id === prev.id)
         if (!exists) {
@@ -68,13 +76,45 @@ function Inner() {
   )
 }
 
-export default function App() {
+function ProjectApp({ projectId }: { projectId: string }) {
   return (
-    <AppProvider projectId={PROJECT_ID}>
+    <AppProvider projectId={projectId}>
       <HelpProvider>
         <Inner />
         <Toaster richColors position="bottom-right" />
       </HelpProvider>
     </AppProvider>
   )
+}
+
+// ---------------------------------------------------------------------------
+// Root — routes between landing page and project app based on URL
+// ---------------------------------------------------------------------------
+
+export default function App() {
+  const [projectId, setProjectId] = useState<string | null>(getProjectIdFromUrl)
+
+  useEffect(() => {
+    function onPopState() {
+      setProjectId(getProjectIdFromUrl())
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  function handleCreate() {
+    const id = crypto.randomUUID()
+    navigateTo(`/project/${id}`)
+  }
+
+  if (!projectId) {
+    return (
+      <>
+        <LandingPage onCreate={handleCreate} />
+        <Toaster richColors position="bottom-right" />
+      </>
+    )
+  }
+
+  return <ProjectApp projectId={projectId} />
 }

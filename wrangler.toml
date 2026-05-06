@@ -1,11 +1,11 @@
-name = "lto-builder"
+name = "tlo-builder"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "lto-builder"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+database_name = "tlo-builder"
+database_id = "b2455c42-e835-4f92-bff9-a0facbe6335b"
 migrations_dir = "./migrations"
 
 [[durable_objects.bindings]]
@@ -16,9 +16,10 @@ class_name = "ProjectRoom"
 tag = "v1"
 new_classes = ["ProjectRoom"]
 
-# Assets are only served in production (after pnpm build)
-[env.production.assets]
+# Static assets — served by the CDN, with ASSETS binding available in the Worker
+[assets]
 directory = "./dist"
+binding = "ASSETS"
 
 [dev]
 port = 8787

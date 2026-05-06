@@ -21,24 +21,21 @@ interface Row {
   start: string
   end: string
   coordinator: string
+  clo: string
   color: string
 }
 
 function makeRow(): Row {
-  return { name: '', description: '', start: '', end: '', coordinator: '', color: randomColor() }
+  return { name: '', description: '', start: '', end: '', coordinator: '', clo: '', color: randomColor() }
 }
 
 function makeRows(n: number): Row[] {
   return Array.from({ length: n }, makeRow)
 }
 
-// Column order when pasting from a spreadsheet (left to right)
+// Left-to-right paste order (excludes color which can't be pasted)
 const PASTE_COLUMNS: (keyof Omit<Row, 'color'>)[] = [
-  'name',
-  'description',
-  'start',
-  'end',
-  'coordinator',
+  'name', 'description', 'start', 'end', 'coordinator', 'clo',
 ]
 
 interface Props {
@@ -48,21 +45,20 @@ interface Props {
 
 export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
   const { send } = useApp()
-  const [rows, setRows] = useState<Row[]>(() => makeRows(5))
+  const [rows, setRows] = useState<Row[]>(() => makeRows(10))
 
   function updateRow(index: number, field: keyof Row, value: string) {
     setRows(prev => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)))
   }
 
   function addRows() {
-    setRows(prev => [...prev, ...makeRows(5)])
+    setRows(prev => [...prev, ...makeRows(10)])
   }
 
   function removeRow(index: number) {
     setRows(prev => prev.filter((_, i) => i !== index))
   }
 
-  // colIndex is the index into PASTE_COLUMNS (0 = name, 1 = description, 2 = start, 3 = end, 4 = coordinator)
   function handlePaste(
     e: React.ClipboardEvent<HTMLInputElement>,
     rowIndex: number,
@@ -70,196 +66,200 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
   ) {
     const text = e.clipboardData.getData('text/plain')
     if (!text.includes('\t') && !text.includes('\n')) return
-
     e.preventDefault()
 
-    const pastedRows = text
-      .trimEnd()
-      .split('\n')
-      .map(line => line.split('\t'))
+    const pastedRows = text.trimEnd().split('\n').map(line => line.split('\t'))
 
     setRows(prev => {
       const updated = [...prev]
       for (let r = 0; r < pastedRows.length; r++) {
         const targetRow = rowIndex + r
-        while (updated.length <= targetRow) {
-          updated.push(makeRow())
-        }
+        while (updated.length <= targetRow) updated.push(makeRow())
         const cells = pastedRows[r]
-        let updatedRow = { ...updated[targetRow] }
+        let next = { ...updated[targetRow] }
         for (let c = 0; c < cells.length; c++) {
           const col = PASTE_COLUMNS[colIndex + c]
-          if (col) {
-            updatedRow = { ...updatedRow, [col]: cells[c].trim() }
-          }
+          if (col) next = { ...next, [col]: cells[c].trim() }
         }
-        updated[targetRow] = updatedRow
+        updated[targetRow] = next
       }
       return updated
     })
   }
 
   function handleSubmit() {
-    const valid = rows.filter(r => r.name.trim())
-    if (valid.length === 0) {
+    const validRows = rows.filter(r => r.name.trim())
+    if (validRows.length === 0) {
       toast.error('Add at least one course name')
       return
     }
-    for (const row of valid) {
-      send({
-        type: 'course:create',
-        name: row.name.trim(),
-        description: row.description.trim(),
-        start: row.start.trim() || null,
-        end: row.end.trim() || null,
-        coordinator: row.coordinator.trim() || null,
-        color: row.color,
-      })
+
+    // Group rows by course name — first row wins for course metadata
+    const courseMap = new Map<string, {
+      name: string; description: string; start: string | null
+      end: string | null; coordinator: string | null; color: string; clos: string[]
+    }>()
+
+    for (const row of validRows) {
+      const name = row.name.trim()
+      if (!courseMap.has(name)) {
+        courseMap.set(name, {
+          name,
+          description: row.description.trim(),
+          start: row.start.trim() || null,
+          end: row.end.trim() || null,
+          coordinator: row.coordinator.trim() || null,
+          color: row.color,
+          clos: [],
+        })
+      }
+      const cloText = row.clo.trim()
+      if (cloText) courseMap.get(name)!.clos.push(cloText)
     }
-    toast.success(`Created ${valid.length} course${valid.length !== 1 ? 's' : ''}`)
+
+    const courseList = Array.from(courseMap.values())
+    send({ type: 'course:bulk_create', courses: courseList })
+
+    const courseCount = courseList.length
+    const cloCount = courseList.reduce((n, c) => n + c.clos.length, 0)
+    toast.success(
+      cloCount > 0
+        ? `Importing ${courseCount} course${courseCount !== 1 ? 's' : ''} with ${cloCount} CLO${cloCount !== 1 ? 's' : ''}`
+        : `Importing ${courseCount} course${courseCount !== 1 ? 's' : ''}`
+    )
     handleOpenChange(false)
   }
 
   function handleOpenChange(v: boolean) {
-    if (!v) setRows(makeRows(5))
+    if (!v) setRows(makeRows(10))
     onOpenChange(v)
   }
 
-  const validCount = rows.filter(r => r.name.trim()).length
+  const uniqueCourseNames = new Set(rows.map(r => r.name.trim()).filter(Boolean))
+  const uniqueCount = uniqueCourseNames.size
+  const cloCount = rows.filter(r => uniqueCourseNames.has(r.name.trim()) && r.clo.trim()).length
+
+  const cellCls = 'border-r p-0 last:border-r-0'
+  const inputCls = 'h-8 w-full rounded-none border-0 bg-transparent px-2 text-xs shadow-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/50 placeholder:text-muted-foreground/40'
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="w-[90vw] max-w-5xl">
-        <DialogHeader>
+      <DialogContent className="w-[90vw] sm:max-w-6xl flex flex-col gap-3 p-4">
+        <DialogHeader className="gap-1">
           <DialogTitle>Bulk import courses</DialogTitle>
-          <DialogDescription>
-            Fill in the table below, or paste directly from Excel or Google Sheets. Columns map
-            left-to-right: <strong>Name → Description → Start → End → Coordinator</strong>. Start
-            and End use the format <strong>year-block</strong> (e.g. <code>2-5</code>).
+          <DialogDescription className="text-xs">
+            Same course name on multiple rows → one course, multiple CLOs.
+            Paste from Excel: columns map left-to-right —{' '}
+            <span className="font-medium text-foreground">
+              Name · Description · Start · End · Coordinator · CLO
+            </span>
+            . Start / End format: <span className="font-medium text-foreground">year-block</span> (e.g. 2-5).
           </DialogDescription>
         </DialogHeader>
 
-        <div className="overflow-hidden rounded-md border">
-          {/* Sticky header */}
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50 text-xs text-muted-foreground">
-                <th className="w-[22%] px-3 py-2 text-left font-medium">
+        {/* Table — horizontal + vertical scroll */}
+        <div className="overflow-auto rounded border max-h-[55vh]">
+          <table className="w-full border-collapse text-xs" style={{ minWidth: 960 }}>
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-muted text-muted-foreground">
+                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 180 }}>
                   Name <span className="text-destructive">*</span>
                 </th>
-                <th className="w-[26%] px-3 py-2 text-left font-medium">Description</th>
-                <th className="w-[10%] px-3 py-2 text-left font-medium">Start</th>
-                <th className="w-[10%] px-3 py-2 text-left font-medium">End</th>
-                <th className="px-3 py-2 text-left font-medium">Coordinator</th>
-                <th className="w-12 px-3 py-2 text-center font-medium">Color</th>
-                <th className="w-8" />
+                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 180 }}>
+                  Description
+                </th>
+                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 72 }}>
+                  Start
+                </th>
+                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 72 }}>
+                  End
+                </th>
+                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 150 }}>
+                  Coordinator
+                </th>
+                <th className="border-b border-r px-2 py-1.5 text-left font-medium">
+                  CLO description
+                </th>
+                <th className=" px-2 py-1.5 text-center font-medium bg-background" style={{ width: 44 }}>
+                </th>
+                <th className="px-1 py-1.5 bg-background" style={{ width: 28 }} />
               </tr>
             </thead>
-          </table>
-
-          {/* Scrollable body */}
-          <div className="max-h-[40vh] overflow-y-auto">
-            <table className="w-full text-sm">
-              <colgroup>
-                <col className="w-[22%]" />
-                <col className="w-[26%]" />
-                <col className="w-[10%]" />
-                <col className="w-[10%]" />
-                <col />
-                <col className="w-12" />
-                <col className="w-8" />
-              </colgroup>
-              <tbody className="divide-y">
-                {rows.map((row, i) => (
-                  <tr key={i} className="group">
-                    <td className="px-2 py-1">
-                      <Input
-                        value={row.name}
-                        onChange={e => updateRow(i, 'name', e.target.value)}
-                        onPaste={e => handlePaste(e, i, 0)}
-                        placeholder="Course name"
-                        className="h-7 border-0 bg-transparent text-sm focus-visible:ring-1"
-                      />
+            <tbody>
+              {rows.map((row, i) => {
+                const isDupe = row.name.trim() && uniqueCourseNames.has(row.name.trim()) &&
+                  rows.findIndex(r => r.name.trim() === row.name.trim()) !== i
+                return (
+                  <tr
+                    key={i}
+                    className={`group  ${isDupe ? 'bg-muted/30' : 'hover:bg-muted/20'}`}
+                  >
+                    <td className={cellCls}>
+                      <Input value={row.name} onChange={e => updateRow(i, 'name', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 0)} placeholder="Course name" className={inputCls} />
                     </td>
-                    <td className="px-2 py-1">
-                      <Input
-                        value={row.description}
-                        onChange={e => updateRow(i, 'description', e.target.value)}
-                        onPaste={e => handlePaste(e, i, 1)}
-                        placeholder="Optional"
-                        className="h-7 border-0 bg-transparent text-sm focus-visible:ring-1"
-                      />
+                    <td className={cellCls}>
+                      <Input value={row.description} onChange={e => updateRow(i, 'description', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 1)} placeholder="—" className={inputCls} />
                     </td>
-                    <td className="px-2 py-1">
-                      <Input
-                        value={row.start}
-                        onChange={e => updateRow(i, 'start', e.target.value)}
-                        onPaste={e => handlePaste(e, i, 2)}
-                        placeholder="e.g. 2-5"
-                        className="h-7 border-0 bg-transparent text-sm focus-visible:ring-1"
-                      />
+                    <td className={cellCls}>
+                      <Input value={row.start} onChange={e => updateRow(i, 'start', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 2)} placeholder="2-1" className={inputCls} />
                     </td>
-                    <td className="px-2 py-1">
-                      <Input
-                        value={row.end}
-                        onChange={e => updateRow(i, 'end', e.target.value)}
-                        onPaste={e => handlePaste(e, i, 3)}
-                        placeholder="e.g. 4-8"
-                        className="h-7 border-0 bg-transparent text-sm focus-visible:ring-1"
-                      />
+                    <td className={cellCls}>
+                      <Input value={row.end} onChange={e => updateRow(i, 'end', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 3)} placeholder="4-8" className={inputCls} />
                     </td>
-                    <td className="px-2 py-1">
-                      <Input
-                        value={row.coordinator}
-                        onChange={e => updateRow(i, 'coordinator', e.target.value)}
-                        onPaste={e => handlePaste(e, i, 4)}
-                        placeholder="Optional"
-                        className="h-7 border-0 bg-transparent text-sm focus-visible:ring-1"
-                      />
+                    <td className={cellCls}>
+                      <Input value={row.coordinator} onChange={e => updateRow(i, 'coordinator', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 4)} placeholder="—" className={inputCls} />
                     </td>
-                    <td className="px-2 py-1">
-                      <div className="flex justify-center">
-                        <ColorPicker
-                          value={row.color}
-                          onChange={v => updateRow(i, 'color', v)}
-                          shape="square"
-                        />
+                    <td className={cellCls}>
+                      <Input value={row.clo} onChange={e => updateRow(i, 'clo', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 5)} placeholder="The student can…" className={inputCls} />
+                    </td>
+                    <td className=''>
+                      <div className="flex h-8 items-center justify-center">
+                        <ColorPicker value={row.color} onChange={v => updateRow(i, 'color', v)} shape="square" />
                       </div>
                     </td>
-                    <td className="pr-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+                    <td className="p-0">
+                      <button
                         onClick={() => removeRow(i)}
+                        className="flex h-8 w-full items-center justify-center text-muted-foreground/30 opacity-0 transition-colors hover:text-destructive group-hover:opacity-100"
                         title="Remove row"
                       >
                         <Trash2 className="size-3" />
-                      </Button>
+                      </button>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-full border border-dashed text-xs text-muted-foreground hover:text-foreground"
-          onClick={addRows}
-        >
-          <Plus className="mr-1 size-3" />
-          Add 5 rows
-        </Button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={addRows}
+            className="flex items-center gap-1 rounded border border-dashed px-2 py-1 text-xs text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors"
+          >
+            <Plus className="size-3" />
+            Add 10 rows
+          </button>
+          {uniqueCount > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {uniqueCount} course{uniqueCount !== 1 ? 's' : ''}
+              {cloCount > 0 && `, ${cloCount} CLO${cloCount !== 1 ? 's' : ''}`}
+            </span>
+          )}
+        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={validCount === 0}>
-            Create {validCount > 0 ? validCount : ''} course{validCount !== 1 ? 's' : ''}
+        <DialogFooter className="mt-0">
+          <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={uniqueCount === 0}>
+            Import{uniqueCount > 0 ? ` ${uniqueCount} course${uniqueCount !== 1 ? 's' : ''}` : ''}
+            {cloCount > 0 ? ` + ${cloCount} CLO${cloCount !== 1 ? 's' : ''}` : ''}
           </Button>
         </DialogFooter>
       </DialogContent>
