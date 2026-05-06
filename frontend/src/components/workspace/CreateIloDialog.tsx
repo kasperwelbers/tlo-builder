@@ -58,7 +58,7 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
   const groups = useMemo<CourseGroup[]>(() => {
     const q = search.toLowerCase()
     return [...state.courses].sort((a, b) => a.name.localeCompare(b.name)).map((course, i) => {
-        const courseNameMatches = !q || course.name.toLowerCase().includes(q)
+        const courseNameMatches = !q || course.name.toLowerCase().includes(q) || course.description.toLowerCase().includes(q)
         const courseClos = clos.filter(co => co.courseId === course.id)
         const visibleClos = courseNameMatches
           ? courseClos
