@@ -41,7 +41,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
     [state.trajectories]
   )
   const courses = useMemo(
-    () => [...state.courses].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...state.courses].sort((a, b) => a.code.localeCompare(b.code)),
     [state.courses]
   )
 
@@ -86,16 +86,16 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
 
   // Add Course dialog
   const [addCourseOpen, setAddCourseOpen] = useState(false)
+  const [newCourseCode, setNewCourseCode] = useState("")
   const [newCourseName, setNewCourseName] = useState("")
-  const [newCourseDescription, setNewCourseDescription] = useState("")
   const [newCourseColor, setNewCourseColor] = useState("")
   const [newCourseCoordinator, setNewCourseCoordinator] = useState("")
   const [newCourseStart, setNewCourseStart] = useState("")
   const [newCourseEnd, setNewCourseEnd] = useState("")
 
   function openAddCourse() {
+    setNewCourseCode("")
     setNewCourseName("")
-    setNewCourseDescription("")
     setNewCourseColor(randomColor())
     setNewCourseCoordinator("")
     setNewCourseStart("")
@@ -104,12 +104,12 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
   }
 
   function submitAddCourse() {
-    const name = newCourseName.trim()
-    if (!name) return
+    const code = newCourseCode.trim()
+    if (!code) return
     send({
       type: "course:create",
-      name,
-      description: newCourseDescription.trim(),
+      code,
+      name: newCourseName.trim(),
       color: newCourseColor,
       coordinator: newCourseCoordinator.trim() || null,
       start: newCourseStart.trim() || null,
@@ -316,7 +316,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                             {badge}
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side="right">{c.name}</TooltipContent>
+                        <TooltipContent side="right">{c.code}{c.name ? `: ${c.name}` : ''}</TooltipContent>
                       </Tooltip>
                     )
                   }
@@ -327,7 +327,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                       className={btnClass}
                     >
                       {badge}
-                      <span className="truncate">{c.name}</span>
+                      <span className="truncate">{c.code}</span>
                     </button>
                   )
                 })}
@@ -425,21 +425,21 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label>Name</Label>
+                <Label>Code <span className="text-destructive">*</span></Label>
                 <Input
-                  value={newCourseName}
-                  onChange={e => setNewCourseName(e.target.value)}
+                  value={newCourseCode}
+                  onChange={e => setNewCourseCode(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") submitAddCourse() }}
-                  placeholder="Course name"
+                  placeholder="e.g. CS101"
                   autoFocus
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Description</Label>
+                <Label>Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <Textarea
-                  value={newCourseDescription}
-                  onChange={e => setNewCourseDescription(e.target.value)}
-                  placeholder="A brief description of this course"
+                  value={newCourseName}
+                  onChange={e => setNewCourseName(e.target.value)}
+                  placeholder="Full course name"
                   rows={2}
                 />
               </div>
@@ -476,7 +476,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAddCourseOpen(false)}>Cancel</Button>
-              <Button onClick={submitAddCourse} disabled={!newCourseName.trim()}>Create</Button>
+              <Button onClick={submitAddCourse} disabled={!newCourseCode.trim()}>Create</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

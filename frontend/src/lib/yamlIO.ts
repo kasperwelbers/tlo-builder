@@ -15,10 +15,10 @@ export function exportToYaml(state: AppState): void {
     if (mapping.cloId === null) continue  // course-level links have no CLO
     const co = coById.get(mapping.cloId)
     if (!co) continue
-    const courseName = courseById.get(co.courseId)?.name ?? ''
-    if (!courseName) continue
+    const courseCode = courseById.get(co.courseId)?.code ?? ''
+    if (!courseCode) continue
     const arr = iloCoMap.get(mapping.iloId) ?? []
-    arr.push({ course: courseName, description: co.description })
+    arr.push({ course: courseCode, description: co.description })
     iloCoMap.set(mapping.iloId, arr)
   }
 
@@ -69,10 +69,10 @@ export function exportToYaml(state: AppState): void {
     })
 
   const coursesOutput = [...courses]
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => a.code.localeCompare(b.code))
     .map(c => {
-      const entry: Record<string, unknown> = { name: c.name }
-      if (c.description) entry.description = c.description
+      const entry: Record<string, unknown> = { code: c.code }
+      if (c.name) entry.name = c.name
       if (c.color) entry.color = c.color
       if (c.coordinator) entry.coordinator = c.coordinator
       if (c.start) entry.start = c.start
@@ -84,7 +84,7 @@ export function exportToYaml(state: AppState): void {
     exported: new Date().toISOString(),
     courses: coursesOutput,
     course_objectives: clos.map(co => ({
-      course: courseById.get(co.courseId)?.name ?? '',
+      course: courseById.get(co.courseId)?.code ?? '',
       description: co.description,
     })),
     trajectories: trajectoryOutput,

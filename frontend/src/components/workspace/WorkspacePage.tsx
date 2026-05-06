@@ -7,11 +7,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { DndContext, DragOverlay, type DragEndEvent } from '@dnd-kit/core'
 import { TloSection } from './TloSection'
 import { TloFormDialog } from '@/components/tlos/TloFormDialog'
 import { useApp } from '@/context/AppContext'
 import type { Tlo } from '@/lib/types'
- import { bloomSortKey } from '@/lib/bloomLevels'
+import { bloomSortKey } from '@/lib/bloomLevels'
 
 interface Props {
   trajectoryId: number
@@ -34,6 +35,21 @@ export function WorkspacePage({ trajectoryId }: Props) {
   const [editValue, setEditValue] = useState("")
   const [addTloOpen, setAddTloOpen] = useState(false)
   const [editTlo, setEditTlo] = useState<Tlo | null>(null)
+  const [activeIloId, setActiveIloId] = useState<number | null>(null)
+
+  const iloById = useMemo(() => new Map(state.ilos.map(i => [i.id, i])), [state.ilos])
+  const activeIlo = activeIloId != null ? iloById.get(activeIloId) : null
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveIloId(null)
+    if (!over) return
+    const iloId = active.id as number
+    const targetTloId = over.id as number
+    const ilo = iloById.get(iloId)
+    if (!ilo || ilo.tloId === targetTloId) return
+    send({ type: 'tlo_ilo_mapping:add', tloId: targetTloId, iloId })
+  }
 
   if (!trajectory) return null
 
@@ -146,38 +162,53 @@ export function WorkspacePage({ trajectoryId }: Props) {
       </div>
 
       {/* TLO list */}
-      <div className="space-y-4">
-        {tlosForTrajectory.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-12 text-center">
-            <p className="text-muted-foreground">No TLOs yet in this trajectory.</p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => { setEditTlo(null); setAddTloOpen(true) }}
-            >
-              <Plus className="mr-1.5 size-4" /> Add your first TLO
-            </Button>
-          </div>
-        ) : (
-          <>
-            {tlosForTrajectory.map(tlo => (
-              <TloSection
-                key={tlo.id}
-                tlo={tlo}
-                ilos={state.ilos.filter(i => i.tloId === tlo.id).sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel))}
-                clos={state.clos}
-                onEdit={() => { setEditTlo(tlo); setAddTloOpen(true) }}
-                onDelete={() => send({ type: "tlo:delete", id: tlo.id })}
-              />
-            ))}
-            <div className="flex justify-end">
-              <Button onClick={() => { setEditTlo(null); setAddTloOpen(true) }} size="sm">
-                <Plus className="mr-1.5 size-4" /> Add TLO
+      <DndContext
+        onDragStart={({ active }) => setActiveIloId(active.id as number)}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveIloId(null)}
+      >
+        <div className="space-y-4">
+          {tlosForTrajectory.length === 0 ? (
+            <div className="rounded-xl border border-dashed p-12 text-center">
+              <p className="text-muted-foreground">No TLOs yet in this trajectory.</p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => { setEditTlo(null); setAddTloOpen(true) }}
+              >
+                <Plus className="mr-1.5 size-4" /> Add your first TLO
               </Button>
             </div>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              {tlosForTrajectory.map(tlo => (
+                <TloSection
+                  key={tlo.id}
+                  tlo={tlo}
+                  ilos={state.ilos.filter(i => i.tloId === tlo.id).sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel))}
+                  clos={state.clos}
+                  draggingIloId={activeIloId}
+                  onEdit={() => { setEditTlo(tlo); setAddTloOpen(true) }}
+                  onDelete={() => send({ type: 'tlo:delete', id: tlo.id })}
+                />
+              ))}
+              <div className="flex justify-end">
+                <Button onClick={() => { setEditTlo(null); setAddTloOpen(true) }} size="sm">
+                  <Plus className="mr-1.5 size-4" /> Add TLO
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <DragOverlay>
+          {activeIlo && (
+            <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-sm font-medium opacity-90 max-w-xs truncate cursor-grabbing">
+              {activeIlo.description || <span className="italic opacity-50">No description</span>}
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {/* Add / edit TLO dialog */}
       <TloFormDialog

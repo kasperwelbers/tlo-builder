@@ -21,14 +21,14 @@ export const trajectories = sqliteTable("trajectories", {
 export const courses = sqliteTable("courses", {
   id:          integer("id").primaryKey({ autoIncrement: true }),
   projectId:   text("project_id").references(() => projects.id).notNull(),
-  name:        text("name").notNull(),
-  description: text("description").notNull().default(""),
+  code:        text("code").notNull(),
+  name:        text("name").notNull().default(""),
   color:       text("color").notNull().default(""),
   coordinator: text("coordinator"),
   start:       text("start"),
   end:         text("end"),
 }, (t) => [
-  uniqueIndex("courses_project_name_idx").on(t.projectId, t.name),
+  uniqueIndex("courses_project_code_idx").on(t.projectId, t.code),
 ])
 
 export const tlos = sqliteTable("tlos", {

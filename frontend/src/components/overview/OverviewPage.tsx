@@ -23,7 +23,7 @@ export function OverviewPage() {
     [state.trajectories],
   )
   const courses = useMemo(
-    () => [...state.courses].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...state.courses].sort((a, b) => a.code.localeCompare(b.code)),
     [state.courses],
   )
 
@@ -136,7 +136,10 @@ export function OverviewPage() {
                       <div className="flex items-center gap-2">
                         <OrderBadge num={ci + 1} color={course.color} shape="square" />
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-medium">{course.name}</p>
+                          <p className="truncate text-xs font-medium">{course.code}</p>
+                          {course.name && (
+                            <p className="truncate text-[10px] text-muted-foreground">{course.name}</p>
+                          )}
                           {(course.start || course.end) && (
                             <p className="text-[10px] text-muted-foreground">
                               {[course.start, course.end].filter(Boolean).join(' → ')}

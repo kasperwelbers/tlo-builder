@@ -29,8 +29,8 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
 
   const groups = useMemo(() => {
     const q = search.toLowerCase()
-    return [...state.courses].sort((a, b) => a.name.localeCompare(b.name)).map((course, i) => {
-        const courseNameMatches = !q || course.name.toLowerCase().includes(q)
+    return [...state.courses].sort((a, b) => a.code.localeCompare(b.code)).map((course, i) => {
+        const courseNameMatches = !q || course.code.toLowerCase().includes(q) || course.name.toLowerCase().includes(q)
         const courseClos = clos.filter(co => co.courseId === course.id)
         const visibleClos = courseNameMatches
           ? courseClos
@@ -112,7 +112,8 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
                         )}
                       />
                       <OrderBadge num={orderNum} color={course.color} shape="square" />
-                      <span className="flex-1 text-sm font-medium">{course.name}</span>
+                      <span className="flex-1 text-sm font-medium">{course.code}</span>
+                      {course.name && <span className="text-xs text-muted-foreground mr-1 truncate max-w-32">{course.name}</span>}
                       <span className="text-xs text-muted-foreground shrink-0">course level</span>
                     </div>
 

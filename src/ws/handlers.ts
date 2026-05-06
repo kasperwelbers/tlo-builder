@@ -84,21 +84,21 @@ async function deleteIlo(db: DB, data: any) {
 
 async function createCourse(db: DB, data: any) {
   await db.insert(courses).values({
-    projectId: data.projectId, name: data.name,
-    description: data.description ?? '', color: data.color ?? '',
+    projectId: data.projectId, code: data.code,
+    name: data.name ?? '', color: data.color ?? '',
     coordinator: data.coordinator ?? null, start: data.start ?? null, end: data.end ?? null,
   }).onConflictDoNothing()
 }
 
 async function updateCourse(db: DB, data: any) {
   await db.update(courses)
-    .set({ name: data.newName ?? data.name, description: data.description, color: data.color, coordinator: data.coordinator ?? null, start: data.start ?? null, end: data.end ?? null })
+    .set({ code: data.newCode ?? data.code, name: data.name, color: data.color, coordinator: data.coordinator ?? null, start: data.start ?? null, end: data.end ?? null })
     .where(and(eq(courses.id, data.courseId), eq(courses.projectId, data.projectId)))
 }
 
 async function renameCourse(db: DB, data: any) {
-  await db.update(courses).set({ name: data.newName })
-    .where(and(eq(courses.projectId, data.projectId), eq(courses.name, data.oldName)))
+  await db.update(courses).set({ code: data.newCode })
+    .where(and(eq(courses.projectId, data.projectId), eq(courses.code, data.oldCode)))
 }
 
 async function deleteCourse(db: DB, data: any) {
@@ -246,9 +246,9 @@ export async function addIloWithLinks(db: DB, data: any): Promise<SyncTable[]> {
 
 async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
   const projectId = data.projectId
-  const courseList = (data.courses ?? []) as Array<{
-    name: string
-    description?: string
+  const courseList = data.courses as Array<{
+    code: string
+    name?: string
     color?: string
     coordinator?: string | null
     start?: string | null
@@ -257,14 +257,14 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
   }>
 
   for (const courseData of courseList) {
-    const name = (courseData.name ?? '').trim()
-    if (!name) continue
+    const code = (courseData.code ?? '').trim()
+    if (!code) continue
 
-    // Create if not exists (unique by project + name)
+    // Create if not exists (unique by project + code)
     await db.insert(courses).values({
       projectId,
-      name,
-      description: courseData.description ?? '',
+      code,
+      name: courseData.name ?? '',
       color: courseData.color ?? '',
       coordinator: courseData.coordinator ?? null,
       start: courseData.start ?? null,
@@ -275,7 +275,7 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
     const [courseRow] = await db
       .select({ id: courses.id })
       .from(courses)
-      .where(and(eq(courses.projectId, projectId), eq(courses.name, name)))
+      .where(and(eq(courses.projectId, projectId), eq(courses.code, code)))
 
     if (!courseRow) continue
 
@@ -305,31 +305,33 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     return row.id
   }
 
-  async function upsertCourse(name: string, description = '', color = '', coordinator?: string, start?: string, end?: string): Promise<number> {
-    await db.insert(courses).values({ projectId, name, description, color, coordinator: coordinator ?? null, start: start ?? null, end: end ?? null }).onConflictDoNothing()
+  async function upsertCourse(code: string, name = '', color = '', coordinator?: string, start?: string, end?: string): Promise<number> {
+    await db.insert(courses).values({ projectId, code, name, color, coordinator: coordinator ?? null, start: start ?? null, end: end ?? null }).onConflictDoNothing()
     const [row] = await db.select({ id: courses.id }).from(courses)
-      .where(and(eq(courses.projectId, projectId), eq(courses.name, name)))
+      .where(and(eq(courses.projectId, projectId), eq(courses.code, code)))
     return row.id
   }
 
   // 1. Upsert courses from the dedicated courses section (preserves color, coordinator, etc.)
-  const courseNameToId = new Map<string, number>()
+  const courseCodeToId = new Map<string, number>()
   for (const courseData of payload.courses ?? []) {
-    const name = (courseData.name ?? '').trim()
-    if (!name) continue
-    courseNameToId.set(name, await upsertCourse(name, courseData.description, courseData.color, courseData.coordinator, courseData.start, courseData.end))
+    // Support both new format (code+name) and old format (name+description) for backward compat
+    const code = (courseData.code ?? courseData.name ?? '').trim()
+    const name = courseData.code ? (courseData.name ?? '') : (courseData.description ?? '')
+    if (!code) continue
+    courseCodeToId.set(code, await upsertCourse(code, name, courseData.color, courseData.coordinator, courseData.start, courseData.end))
   }
 
-  // 2. Also create any courses referenced only in course_objectives (name-only fallback)
-  const uniqueCourseNames = [...new Set<string>((payload.course_objectives ?? []).map((c: any) => c.course as string))]
-  for (const name of uniqueCourseNames) {
-    if (!courseNameToId.has(name)) courseNameToId.set(name, await upsertCourse(name))
+  // 2. Also create any courses referenced only in course_objectives (code-only fallback)
+  const uniqueCourseCodes = [...new Set<string>((payload.course_objectives ?? []).map((c: any) => c.course as string))]
+  for (const code of uniqueCourseCodes) {
+    if (!courseCodeToId.has(code)) courseCodeToId.set(code, await upsertCourse(code))
   }
 
   // Key CLOs by course+description since there is no name field
   const coMap = new Map<string, number>()
   for (const co of payload.course_objectives ?? []) {
-    const courseId = courseNameToId.get(co.course)
+    const courseId = courseCodeToId.get(co.course)
     if (courseId === undefined) continue
     const [inserted] = await db.insert(clos)
       .values({ projectId, courseId, description: co.description ?? '' }).returning()
@@ -351,7 +353,7 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
         await db.insert(tloIloMappings).values({ tloId: newTlo.id, iloId: newIlo.id, projectId })
         for (const coRef of iloData.course_objectives ?? []) {
           const cloId = coMap.get(`${coRef.course}::${coRef.description}`)
-          const courseId = courseNameToId.get(coRef.course)
+          const courseId = courseCodeToId.get(coRef.course)
           if (cloId !== undefined && courseId !== undefined)
             await db.insert(iloCloMappings)
               .values({ iloId: newIlo.id, courseId, cloId, projectId }).onConflictDoNothing()

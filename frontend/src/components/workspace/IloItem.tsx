@@ -162,13 +162,13 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
                   <button
                     className="shrink-0 rounded-sm ring-offset-background hover:ring-2 hover:ring-ring hover:ring-offset-1 transition-all focus:outline-none"
                     onClick={() => navigateTo({ type: "course", id: course.id })}
-                    aria-label={"Go to " + course.name}
+                    aria-label={"Go to " + course.code}
                   >
                     <OrderBadge num={courseOrderNum.get(course.id) ?? 0} color={course.color} shape="square" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-52">
-                  <p className="font-medium text-xs">{course.name}</p>
+                  <p className="font-medium text-xs">{course.code}{course.name ? `: ${course.name}` : ''}</p>
                   {clo
                     ? <p className="text-xs opacity-75 leading-snug">{clo.description}</p>
                     : <p className="text-xs opacity-60 italic">Course level</p>

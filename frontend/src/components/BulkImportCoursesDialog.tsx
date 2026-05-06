@@ -16,8 +16,8 @@ import { useApp } from '@/context/AppContext'
 import { randomColor } from '@/lib/colorPalette'
 
 interface Row {
+  code: string
   name: string
-  description: string
   start: string
   end: string
   coordinator: string
@@ -26,7 +26,7 @@ interface Row {
 }
 
 function makeRow(): Row {
-  return { name: '', description: '', start: '', end: '', coordinator: '', clo: '', color: randomColor() }
+  return { code: '', name: '', start: '', end: '', coordinator: '', clo: '', color: randomColor() }
 }
 
 function makeRows(n: number): Row[] {
@@ -35,7 +35,7 @@ function makeRows(n: number): Row[] {
 
 // Left-to-right paste order (excludes color which can't be pasted)
 const PASTE_COLUMNS: (keyof Omit<Row, 'color'>)[] = [
-  'name', 'description', 'start', 'end', 'coordinator', 'clo',
+  'code', 'name', 'start', 'end', 'coordinator', 'clo',
 ]
 
 interface Props {
@@ -88,24 +88,24 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
   }
 
   function handleSubmit() {
-    const validRows = rows.filter(r => r.name.trim())
+    const validRows = rows.filter(r => r.code.trim())
     if (validRows.length === 0) {
-      toast.error('Add at least one course name')
+      toast.error('Add at least one course code')
       return
     }
 
-    // Group rows by course name — first row wins for course metadata
+    // Group rows by course code — first row wins for course metadata
     const courseMap = new Map<string, {
-      name: string; description: string; start: string | null
+      code: string; name: string; start: string | null
       end: string | null; coordinator: string | null; color: string; clos: string[]
     }>()
 
     for (const row of validRows) {
-      const name = row.name.trim()
-      if (!courseMap.has(name)) {
-        courseMap.set(name, {
-          name,
-          description: row.description.trim(),
+      const code = row.code.trim()
+      if (!courseMap.has(code)) {
+        courseMap.set(code, {
+          code,
+          name: row.name.trim(),
           start: row.start.trim() || null,
           end: row.end.trim() || null,
           coordinator: row.coordinator.trim() || null,
@@ -114,7 +114,7 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
         })
       }
       const cloText = row.clo.trim()
-      if (cloText) courseMap.get(name)!.clos.push(cloText)
+      if (cloText) courseMap.get(code)!.clos.push(cloText)
     }
 
     const courseList = Array.from(courseMap.values())
@@ -135,9 +135,9 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
     onOpenChange(v)
   }
 
-  const uniqueCourseNames = new Set(rows.map(r => r.name.trim()).filter(Boolean))
-  const uniqueCount = uniqueCourseNames.size
-  const cloCount = rows.filter(r => uniqueCourseNames.has(r.name.trim()) && r.clo.trim()).length
+  const uniqueCourseCodes = new Set(rows.map(r => r.code.trim()).filter(Boolean))
+  const uniqueCount = uniqueCourseCodes.size
+  const cloCount = rows.filter(r => uniqueCourseCodes.has(r.code.trim()) && r.clo.trim()).length
 
   const cellCls = 'border-r p-0 last:border-r-0'
   const inputCls = 'h-8 w-full rounded-none border-0 bg-transparent px-2 text-xs shadow-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring/50 placeholder:text-muted-foreground/40'
@@ -151,7 +151,7 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
             Same course name on multiple rows → one course, multiple CLOs.
             Paste from Excel: columns map left-to-right —{' '}
             <span className="font-medium text-foreground">
-              Name · Description · Start · End · Coordinator · CLO
+              Code · Name · Start · End · Coordinator · CLO
             </span>
             . Start / End format: <span className="font-medium text-foreground">year-block</span> (e.g. 2-5).
           </DialogDescription>
@@ -162,11 +162,11 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
           <table className="w-full border-collapse text-xs" style={{ minWidth: 960 }}>
             <thead className="sticky top-0 z-10">
               <tr className="bg-muted text-muted-foreground">
-                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 180 }}>
-                  Name <span className="text-destructive">*</span>
-                </th>
-                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 180 }}>
-                  Description
+                <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 120 }}>
+                    Code <span className="text-destructive">*</span>
+                  </th>
+                  <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 220 }}>
+                    Name
                 </th>
                 <th className="border-b border-r px-2 py-1.5 text-left font-medium" style={{ width: 72 }}>
                   Start
@@ -187,20 +187,20 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
             </thead>
             <tbody>
               {rows.map((row, i) => {
-                const isDupe = row.name.trim() && uniqueCourseNames.has(row.name.trim()) &&
-                  rows.findIndex(r => r.name.trim() === row.name.trim()) !== i
+                const isDupe = row.code.trim() && uniqueCourseCodes.has(row.code.trim()) &&
+                  rows.findIndex(r => r.code.trim() === row.code.trim()) !== i
                 return (
                   <tr
                     key={i}
                     className={`group  ${isDupe ? 'bg-muted/30' : 'hover:bg-muted/20'}`}
                   >
                     <td className={cellCls}>
-                      <Input value={row.name} onChange={e => updateRow(i, 'name', e.target.value)}
-                        onPaste={e => handlePaste(e, i, 0)} placeholder="Course name" className={inputCls} />
+                      <Input value={row.code} onChange={e => updateRow(i, 'code', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 0)} placeholder="e.g. CS101" className={inputCls} />
                     </td>
                     <td className={cellCls}>
-                      <Input value={row.description} onChange={e => updateRow(i, 'description', e.target.value)}
-                        onPaste={e => handlePaste(e, i, 1)} placeholder="—" className={inputCls} />
+                      <Input value={row.name} onChange={e => updateRow(i, 'name', e.target.value)}
+                        onPaste={e => handlePaste(e, i, 1)} placeholder="Full course name" className={inputCls} />
                     </td>
                     <td className={cellCls}>
                       <Input value={row.start} onChange={e => updateRow(i, 'start', e.target.value)}

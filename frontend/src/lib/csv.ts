@@ -17,7 +17,7 @@ export function exportClos(clos: Clo[], courses: Course[]) {
   const courseById = new Map(courses.map(c => [c.id, c]))
   const csv = Papa.unparse(
     clos.map(c => ({
-      course: courseById.get(c.courseId)?.name ?? '',
+      course: courseById.get(c.courseId)?.code ?? '',
       description: c.description,
     }))
   )

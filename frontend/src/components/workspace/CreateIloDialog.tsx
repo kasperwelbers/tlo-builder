@@ -57,8 +57,8 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
   // When only CLOs match, show only those CLOs (but still show the course row as a link).
   const groups = useMemo<CourseGroup[]>(() => {
     const q = search.toLowerCase()
-    return [...state.courses].sort((a, b) => a.name.localeCompare(b.name)).map((course, i) => {
-        const courseNameMatches = !q || course.name.toLowerCase().includes(q) || course.description.toLowerCase().includes(q)
+    return [...state.courses].sort((a, b) => a.code.localeCompare(b.code)).map((course, i) => {
+        const courseNameMatches = !q || course.code.toLowerCase().includes(q) || course.name.toLowerCase().includes(q)
         const courseClos = clos.filter(co => co.courseId === course.id)
         const visibleClos = courseNameMatches
           ? courseClos
@@ -144,7 +144,8 @@ export function CreateIloDialog({ open, onOpenChange, tlo, clos }: CreateIloDial
                       {/* Course row -- non-interactive header */}
                       <div className="flex items-center gap-2 px-3 py-2" style={{ backgroundColor: course.color + '28' }}>
                         <OrderBadge num={orderNum} color={course.color} shape="square" />
-                        <span className="flex-1 text-xs font-semibold">{course.name}</span>
+                        <span className="text-xs font-semibold">{course.code}</span>
+                        {course.name && <span className="text-xs text-muted-foreground font-normal truncate">{course.name}</span>}
                       </div>
 
                       {/* CLO rows -- indented to show membership */}

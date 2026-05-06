@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ChevronDown, Plus, Trash2 } from "lucide-react"
+import { ChevronDown, GripVertical, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BloomSelect } from "@/components/ui/bloom-select"
@@ -8,6 +8,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useDraggable, useDroppable } from "@dnd-kit/core"
+import { CSS } from "@dnd-kit/utilities"
 import { IloItem } from "./IloItem"
 import { CreateIloDialog } from "./CreateIloDialog"
 import { useApp } from "@/context/AppContext"
@@ -18,11 +20,58 @@ interface TloSectionProps {
   tlo: Tlo
   ilos: Ilo[]
   clos: Clo[]
+  draggingIloId: number | null
   onEdit: () => void
   onDelete: () => void
 }
 
-export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProps) {
+// ── Draggable ILO row ────────────────────────────────────────────────────────
+function DraggableIloRow({ ilo, onDelete }: { ilo: Ilo; onDelete: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ilo.id })
+  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("flex items-center", isDragging && "opacity-40")}
+    >
+      <button
+        {...listeners}
+        {...attributes}
+        className="px-1 py-1.5 cursor-grab text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
+        tabIndex={-1}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <div className="flex-1 min-w-0">
+        <IloItem ilo={ilo} onDelete={onDelete} />
+      </div>
+    </div>
+  )
+}
+
+// ── ILO drop zone (the body of a TloSection) ─────────────────────────────────
+function IloDropZone({ tloId, children, isEmpty, isTarget }: {
+  tloId: number; children: React.ReactNode; isEmpty: boolean; isTarget: boolean
+}) {
+  const { isOver, setNodeRef } = useDroppable({ id: tloId })
+  const active = isOver && isTarget
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "transition-all",
+        active && "ring-2 ring-inset ring-primary/40 bg-primary/5",
+        isEmpty && isTarget && "min-h-12",
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function TloSection({ tlo, ilos, clos, draggingIloId, onEdit, onDelete }: TloSectionProps) {
   const { send } = useApp()
 
   const [collapsed, setCollapsed] = useState(false)
@@ -166,14 +215,18 @@ export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProp
       </div>
 
       {!collapsed && (
-        <>
+        <IloDropZone
+          tloId={tlo.id}
+          isEmpty={ilos.length === 0}
+          isTarget={draggingIloId !== null && !ilos.some(i => i.id === draggingIloId)}
+        >
           {/* ILOs */}
           {ilos.length > 0 && (
             <>
               <Separator />
               <div className="py-1">
                 {ilos.map(ilo => (
-                  <IloItem
+                  <DraggableIloRow
                     key={ilo.id}
                     ilo={ilo}
                     onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
@@ -197,7 +250,7 @@ export function TloSection({ tlo, ilos, clos, onEdit, onDelete }: TloSectionProp
               <Plus className="mr-1 size-3.5" /> New ILO from CLO
             </Button>
           </div>
-        </>
+        </IloDropZone>
       )}
 
       {/* Create ILO from CLO */}

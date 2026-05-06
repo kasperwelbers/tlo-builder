@@ -108,7 +108,7 @@ export function CloPage({ courseId }: Props) {
   }
 
   // Header inline-editing state
-  const [editingField, setEditingField] = useState<"name" | "description" | "coordinator" | "start" | "end" | null>(null)
+  const [editingField, setEditingField] = useState<"code" | "name" | "coordinator" | "start" | "end" | null>(null)
   const [editValue, setEditValue] = useState("")
 
   // CLO dialog
@@ -120,7 +120,7 @@ export function CloPage({ courseId }: Props) {
 
   if (!course) return null
 
-  function handleStartEdit(field: "name" | "description" | "coordinator" | "start" | "end", value: string) {
+  function handleStartEdit(field: "code" | "name" | "coordinator" | "start" | "end", value: string) {
     setEditingField(field)
     setEditValue(value)
   }
@@ -130,8 +130,8 @@ export function CloPage({ courseId }: Props) {
     send({
       type: "course:update",
       courseId: course!.id,
+      code: editingField === "code" ? editValue : course!.code,
       name: editingField === "name" ? editValue : course!.name,
-      description: editingField === "description" ? editValue : course!.description,
       color: course!.color,
       coordinator: editingField === "coordinator" ? (editValue.trim() || null) : course!.coordinator,
       start: editingField === "start" ? (editValue.trim() || null) : course!.start,
@@ -144,8 +144,8 @@ export function CloPage({ courseId }: Props) {
     send({
       type: "course:update",
       courseId: course!.id,
+      code: course!.code,
       name: course!.name,
-      description: course!.description,
       color,
       coordinator: course!.coordinator,
       start: course!.start,
@@ -177,7 +177,7 @@ export function CloPage({ courseId }: Props) {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete course "{course.name}"?</AlertDialogTitle>
+                <AlertDialogTitle>Delete course "{course.code}"?</AlertDialogTitle>
                 <AlertDialogDescription>
                   This will delete all {courseClos.length} CLO{courseClos.length !== 1 ? "s" : ""} in this course and their mappings.
                 </AlertDialogDescription>
@@ -194,7 +194,7 @@ export function CloPage({ courseId }: Props) {
 
         {/* Title and description */}
         <div>
-          {editingField === "name" ? (
+          {editingField === "code" ? (
             <Input
               value={editValue}
               onChange={e => setEditValue(e.target.value)}
@@ -211,13 +211,13 @@ export function CloPage({ courseId }: Props) {
               role="button"
               tabIndex={0}
               className="text-2xl font-bold cursor-pointer rounded px-1 hover:bg-muted/50"
-              onClick={() => handleStartEdit("name", course.name)}
+              onClick={() => handleStartEdit("code", course.code)}
             >
-              {course.name}
+              {course.code}
             </h1>
           )}
 
-          {editingField === "description" ? (
+          {editingField === "name" ? (
             <Input
               value={editValue}
               onChange={e => setEditValue(e.target.value)}
@@ -234,9 +234,9 @@ export function CloPage({ courseId }: Props) {
               role="button"
               tabIndex={0}
               className="mt-1 text-sm text-muted-foreground cursor-pointer rounded px-1 hover:bg-muted/50"
-              onClick={() => handleStartEdit("description", course.description || "")}
+              onClick={() => handleStartEdit("name", course.name || "")}
             >
-              {course.description || <span className="italic opacity-50">A brief description of this course</span>}
+              {course.name || <span className="italic opacity-50">Full course name</span>}
             </p>
           )}
 
