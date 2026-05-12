@@ -29,6 +29,7 @@ port = 8787
 
 [[send_email]]
 name = "EMAIL"
+remote = true
 
 [vars]
 EMAIL_FROM = "noreply@dataliteracy.cc"
