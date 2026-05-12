@@ -11,7 +11,7 @@ import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent 
 import { CSS } from "@dnd-kit/utilities"
 import { CloSection } from "./CloSection"
 import { CloFormDialog } from "./CloFormDialog"
-import { IloItem } from "@/components/workspace/IloItem"
+import { IloItem } from "@/components/tlos/IloItem"
 import { useApp } from "@/context/AppContext"
 import { bloomSortKey } from "@/lib/bloomLevels"
 import { cn } from "@/lib/utils"
@@ -162,35 +162,9 @@ export function CloPage({ courseId }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       {/* ── Course header ─────────────────────────────────────────────────── */}
       <div className="space-y-2">
-        {/* Action row */}
-        <div className="flex items-center justify-end gap-2">
-          <ColorPicker value={course.color} onChange={handleColorChange} shape="square" />
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete course "{course.code}"?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will delete all {courseClos.length} CLO{courseClos.length !== 1 ? "s" : ""} in this course and their mappings.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => send({ type: "course:delete", courseId: course.id })}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
 
         {/* Title and description */}
         <div>
@@ -324,6 +298,34 @@ export function CloPage({ courseId }: Props) {
                 </span>
               )}
             </div>
+
+          </div>
+
+          {/* Action row */}
+          <div className="flex items-center justify-end gap-2">
+            <ColorPicker value={course.color} onChange={handleColorChange} shape="square" />
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete course "{course.code}"?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete all {courseClos.length} CLO{courseClos.length !== 1 ? "s" : ""} in this course and their mappings.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => send({ type: "course:delete", courseId: course.id })}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>

@@ -17,10 +17,10 @@ import type { Ilo } from "@/lib/types"
 interface IloItemProps {
   ilo: Ilo
   onDelete: () => void
-  variant?: "workspace" | "course"
+  variant?: "trajectory" | "course"
 }
 
-export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) {
+export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps) {
   const { state, send } = useApp()
   const { navigateTo } = useNav()
   const [editingField, setEditingField] = useState<"description" | null>(null)
@@ -130,7 +130,7 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
             </AlertDialogContent>
           </AlertDialog>
 
-          {/* Badge: TLO (circle) on course page, course (square) on workspace page */}
+          {/* Badge: TLO (circle) on course page, course (square) on trajectory page */}
           {variant === "course" ? (() => {
             const tlo = ilo.tloId != null ? tloById.get(ilo.tloId) : null
             const trajectory = tlo ? trajectoryById.get(tlo.trajectoryId) : null
@@ -179,7 +179,7 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
           })}
 
           {/* Link button — workspace only */}
-          {variant === "workspace" && (
+          {variant === "trajectory" && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -199,7 +199,7 @@ export function IloItem({ ilo, onDelete, variant = "workspace" }: IloItemProps) 
       </div>
 
       {/* Link dialog — workspace only */}
-      {variant === "workspace" && (
+      {variant === "trajectory" && (
         <IloLinkDialog
           open={linkOpen}
           onOpenChange={setLinkOpen}

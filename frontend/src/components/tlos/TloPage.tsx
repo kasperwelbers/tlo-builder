@@ -18,7 +18,7 @@ interface Props {
   trajectoryId: number
 }
 
-export function WorkspacePage({ trajectoryId }: Props) {
+export function TrajectoryPage({ trajectoryId }: Props) {
   const { state, send } = useApp()
 
   const trajectory = state.trajectories.find(t => t.id === trajectoryId)
@@ -81,35 +81,9 @@ export function WorkspacePage({ trajectoryId }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       {/* Trajectory header */}
       <div className="space-y-2">
-        {/* Action row */}
-        <div className="flex items-center justify-end gap-2">
-          <ColorPicker value={trajectory.color} onChange={handleColorChange} />
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete trajectory?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will delete <strong>{trajectory.name}</strong> and all {tlosForTrajectory.length} TLO{tlosForTrajectory.length !== 1 ? "s" : ""} inside it.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => send({ type: "trajectory:delete", trajectoryId: trajectory.id })}>
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
 
         {/* Title and description */}
         <div>
@@ -158,6 +132,33 @@ export function WorkspacePage({ trajectoryId }: Props) {
               {trajectory.description || <span className="italic opacity-50">A brief description of this trajectory</span>}
             </p>
           )}
+        </div>
+
+        {/* Action row */}
+        <div className="flex items-center justify-end gap-2">
+          <ColorPicker value={trajectory.color} onChange={handleColorChange} />
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                <Trash2 className="size-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete trajectory?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete <strong>{trajectory.name}</strong> and all {tlosForTrajectory.length} TLO{tlosForTrajectory.length !== 1 ? "s" : ""} inside it.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => send({ type: "trajectory:delete", trajectoryId: trajectory.id })}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 

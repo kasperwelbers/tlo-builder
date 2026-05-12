@@ -10,6 +10,25 @@ const INITIAL_STATE: AppState = {
   courses: [],
 }
 
+async function fetchTicket(projectId: string): Promise<string | null> {
+  try {
+    const res = await fetch('/api/ws-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectId }),
+    })
+    if (res.status === 401) {
+      window.location.reload()
+      return null
+    }
+    if (!res.ok) return null
+    const { ticket } = await res.json() as { ticket: string }
+    return ticket
+  } catch {
+    return null
+  }
+}
+
 export function useWebSocket(projectId: string) {
   const [state, setState] = useState<AppState>(INITIAL_STATE)
   const [connected, setConnected] = useState(false)
@@ -29,11 +48,14 @@ export function useWebSocket(projectId: string) {
   useEffect(() => {
     mountedRef.current = true
 
-    function connect() {
+    async function connect() {
       if (!mountedRef.current) return
 
+      const ticket = await fetchTicket(projectId)
+      if (!ticket || !mountedRef.current) return
+
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${projectId}`)
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${projectId}?ticket=${ticket}`)
       wsRef.current = ws
 
       ws.onopen = () => {

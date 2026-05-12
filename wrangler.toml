@@ -2,6 +2,7 @@ name = "tlo-builder"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+
 [[d1_databases]]
 binding = "DB"
 database_name = "tlo-builder"
@@ -23,3 +24,11 @@ binding = "ASSETS"
 
 [dev]
 port = 8787
+
+
+
+[[send_email]]
+name = "EMAIL"
+
+[vars]
+EMAIL_FROM = "noreply@dataliteracy.cc"

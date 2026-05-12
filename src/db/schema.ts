@@ -104,3 +104,37 @@ export const iloCloMappingRelations = relations(iloCloMappings, ({ one }) => ({
   course: one(courses, { fields: [iloCloMappings.courseId], references: [courses.id] }),
   clo:    one(clos,    { fields: [iloCloMappings.cloId],    references: [clos.id] }),
 }))
+
+export const users = sqliteTable('users', {
+  id:        text('id').primaryKey(),
+  email:     text('email').notNull().unique(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
+})
+
+export const otpCodes = sqliteTable('otp_codes', {
+  email:     text('email').notNull(),
+  code:      text('code').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+})
+
+export const sessions = sqliteTable('sessions', {
+  id:        text('id').primaryKey(),
+  userId:    text('user_id').notNull().references(() => users.id),
+  expiresAt: integer('expires_at').notNull(),
+  createdAt: integer('created_at').notNull(),
+})
+
+export const wsTickets = sqliteTable('ws_tickets', {
+  ticket:    text('ticket').primaryKey(),
+  userId:    text('user_id').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+})
+
+export const userRoles = sqliteTable('user_roles', {
+  userId:    text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role:      text('role').notNull(),
+  projectId: text('project_id').notNull().default(''),
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.role, t.projectId] }),
+])

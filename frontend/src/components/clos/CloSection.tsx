@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useDroppable, useDraggable } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
-import { IloItem } from "@/components/workspace/IloItem"
+import { IloItem } from "@/components/tlos/IloItem"
 import { useApp } from "@/context/AppContext"
 import { CloLinkTloDialog } from "./CloLinkTloDialog"
 import { cn } from "@/lib/utils"

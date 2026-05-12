@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Plus, PanelLeftClose, PanelLeftOpen, HelpCircle, Sheet, LayoutGrid } from 'lucide-react'
+import { Plus, PanelLeftClose, PanelLeftOpen, HelpCircle, Sheet, LayoutGrid, ArrowLeft, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +16,7 @@ import { useHelp } from '@/context/HelpContext'
 import { randomColor } from '@/lib/colorPalette'
 import { YamlActions } from '@/components/YamlActions'
 import { BulkImportCoursesDialog } from '@/components/BulkImportCoursesDialog'
+import { ProjectSettingsDialog } from '@/components/ProjectSettingsDialog'
 
 export type Page = { type: "trajectory"; id: number } | { type: "course"; id: number } | { type: "overview" }
 
@@ -24,12 +25,17 @@ interface AppShellProps {
   onNavigate: (page: Page) => void
   connected: boolean
   children: ReactNode
+  projectId: string
+  projectName: string
+  onGoHome: () => void
+  onRename: (name: string) => void
 }
 
-export function AppShell({ currentPage, onNavigate, connected, children }: AppShellProps) {
+export function AppShell({ currentPage, onNavigate, connected, children, projectId, projectName, onGoHome, onRename }: AppShellProps) {
   const { state, send } = useApp()
   const [collapsed, setCollapsed] = useState(false)
   const { openHelp } = useHelp()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   function handleNavigateOverview() {
     onNavigate({ type: "overview" })
@@ -136,7 +142,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
           >
             {!collapsed && (
               <>
-                <span className="text-lg font-bold flex-1 truncate">TLO Builder</span>
+                <span className="text-sm font-semibold flex-1 truncate">{projectName || '…'}</span>
                 <span
                   className={cn("size-2 rounded-full shrink-0", connected ? "bg-green-500" : "bg-red-500")}
                   title={connected ? "Connected" : "Disconnected"}
@@ -156,6 +162,51 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Back to projects + Settings */}
+            <div className={cn("border-b", collapsed ? "px-1.5 py-1.5" : "px-3 py-2")}>
+              {collapsed ? (
+                <div className="space-y-0.5">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onGoHome}
+                        className="flex w-full items-center justify-center rounded-md py-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <ArrowLeft className="size-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">All projects</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setSettingsOpen(true)}
+                        className="flex w-full items-center justify-center rounded-md py-1.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                      >
+                        <Settings className="size-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Project settings</TooltipContent>
+                  </Tooltip>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={onGoHome}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ArrowLeft className="size-3" />All projects
+                  </button>
+                  <button
+                    onClick={() => setSettingsOpen(true)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Settings className="size-3" />Settings
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Overview */}
             <div className={cn("pt-3 pb-1", collapsed ? "px-1.5" : "px-3")}>
               {collapsed ? (
@@ -341,12 +392,7 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
             {collapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 mt-1"
-                    onClick={() => openHelp("overview")}
-                  >
+                  <Button variant="ghost" size="icon" className="size-7 mt-1" onClick={() => openHelp("overview")}>
                     <HelpCircle className="size-3.5" />
                   </Button>
                 </TooltipTrigger>
@@ -359,14 +405,13 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
                 className="w-full mt-1.5 h-7 text-xs text-muted-foreground justify-start gap-1.5"
                 onClick={() => openHelp("overview")}
               >
-                <HelpCircle className="size-3.5" />
-                Help
+                <HelpCircle className="size-3.5" />Help
               </Button>
             )}
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-6 pt-8">{children}</main>
 
         {/* Add Trajectory Dialog */}
         <Dialog open={addTrajOpen} onOpenChange={setAddTrajOpen}>
@@ -416,6 +461,14 @@ export function AppShell({ currentPage, onNavigate, connected, children }: AppSh
 
         {/* Bulk Import Courses Dialog */}
         <BulkImportCoursesDialog open={bulkImportOpen} onOpenChange={setBulkImportOpen} />
+
+        <ProjectSettingsDialog
+          projectId={projectId}
+          projectName={projectName}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          onRename={onRename}
+        />
 
         {/* Add Course Dialog */}
         <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>

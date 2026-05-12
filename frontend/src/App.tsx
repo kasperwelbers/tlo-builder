@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react"
+import { AuthProvider, useAuth } from "@/context/AuthContext"
 import { AppProvider, useApp } from "@/context/AppContext"
 import { HelpProvider } from "@/context/HelpContext"
 import { NavProvider } from "@/context/NavigationContext"
 import { AppShell } from "@/components/layout/AppShell"
 import type { Page } from "@/components/layout/AppShell"
-import { WorkspacePage } from "@/components/workspace/WorkspacePage"
+import { TrajectoryPage } from "@/components/tlos/TloPage"
 import { CloPage } from "@/components/clos/CloPage"
 import { OverviewPage } from "@/components/overview/OverviewPage"
 import { LandingPage } from "@/components/LandingPage"
+import { LoginPage } from "@/components/auth/LoginPage"
+import { UserMenu } from "@/components/UserMenu"
 import { Toaster } from "@/components/ui/sonner"
 
 // ---------------------------------------------------------------------------
@@ -25,10 +28,17 @@ function navigateTo(path: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Project app (shown when a project ID is present in the URL)
+// Project app
 // ---------------------------------------------------------------------------
 
-function Inner() {
+interface InnerProps {
+  projectId: string
+  projectName: string
+  onGoHome: () => void
+  onRename: (name: string) => void
+}
+
+function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
   const { state, connected } = useApp()
   const [page, setPage] = useState<Page | null>(null)
 
@@ -62,8 +72,16 @@ function Inner() {
 
   return (
     <NavProvider onNavigate={setPage}>
-      <AppShell currentPage={page} onNavigate={setPage} connected={connected}>
-        {page?.type === "trajectory" && <WorkspacePage trajectoryId={page.id} />}
+      <AppShell
+        currentPage={page}
+        onNavigate={setPage}
+        connected={connected}
+        projectId={projectId}
+        projectName={projectName}
+        onGoHome={onGoHome}
+        onRename={onRename}
+      >
+        {page?.type === "trajectory" && <TrajectoryPage trajectoryId={page.id} />}
         {page?.type === "course" && <CloPage courseId={page.id} />}
         {page?.type === "overview" && <OverviewPage />}
         {page === null && (
@@ -76,11 +94,28 @@ function Inner() {
   )
 }
 
-function ProjectApp({ projectId }: { projectId: string }) {
+function ProjectApp({ projectId, email }: { projectId: string; email: string }) {
+  const [projectName, setProjectName] = useState('')
+
+  useEffect(() => {
+    fetch('/api/projects')
+      .then(r => r.json() as Promise<{ id: string; name: string }[]>)
+      .then(list => {
+        const found = list.find(p => p.id === projectId)
+        if (found) setProjectName(found.name)
+      })
+      .catch(() => {})
+  }, [projectId])
+
   return (
     <AppProvider projectId={projectId}>
       <HelpProvider>
-        <Inner />
+        <Inner
+          projectId={projectId}
+          projectName={projectName}
+          onGoHome={() => navigateTo('/')}
+          onRename={setProjectName}
+        />
         <Toaster richColors position="bottom-right" />
       </HelpProvider>
     </AppProvider>
@@ -88,33 +123,64 @@ function ProjectApp({ projectId }: { projectId: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Root — routes between landing page and project app based on URL
+// Authenticated shell
 // ---------------------------------------------------------------------------
 
-export default function App() {
+function AuthenticatedApp() {
+  const auth = useAuth()
   const [projectId, setProjectId] = useState<string | null>(getProjectIdFromUrl)
 
   useEffect(() => {
-    function onPopState() {
-      setProjectId(getProjectIdFromUrl())
-    }
+    function onPopState() { setProjectId(getProjectIdFromUrl()) }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
-  function handleCreate() {
-    const id = crypto.randomUUID()
-    navigateTo(`/project/${id}`)
+  if (auth.status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      </div>
+    )
   }
 
-  if (!projectId) {
+  if (auth.status === 'unauthenticated') {
     return (
       <>
-        <LandingPage onCreate={handleCreate} />
+        <LoginPage />
         <Toaster richColors position="bottom-right" />
       </>
     )
   }
 
-  return <ProjectApp projectId={projectId} />
+  const { user } = auth
+
+  if (!projectId) {
+    return (
+      <>
+        <UserMenu email={user.email} />
+        <LandingPage onOpen={id => navigateTo('/project/' + id)} />
+        <Toaster richColors position="bottom-right" />
+      </>
+    )
+  }
+
+  return (
+    <>
+      <UserMenu email={user.email} />
+      <ProjectApp projectId={projectId} email={user.email} />
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthenticatedApp />
+    </AuthProvider>
+  )
 }
