@@ -32,6 +32,7 @@ async function fetchTicket(projectId: string): Promise<string | null> {
 export function useWebSocket(projectId: string) {
   const [state, setState] = useState<AppState>(INITIAL_STATE)
   const [connected, setConnected] = useState(false)
+  const [ready, setReady] = useState(false)
   const wsRef = useRef<WebSocket | null>(null)
   const mountedRef = useRef(true)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -81,6 +82,7 @@ export function useWebSocket(projectId: string) {
                 iloCloMappings: d.iloCloMappings ?? [],
                 courses: d.courses ?? [],
               })
+              setReady(true)
               break
             }
             case "sync:trajectories":
@@ -116,6 +118,7 @@ export function useWebSocket(projectId: string) {
       ws.onclose = () => {
         if (!mountedRef.current) return
         setConnected(false)
+        setReady(false)
         reconnectTimer.current = setTimeout(() => {
           if (mountedRef.current) connect()
         }, 3000)
@@ -138,5 +141,5 @@ export function useWebSocket(projectId: string) {
     }
   }, [projectId])
 
-  return { state, connected, send }
+  return { state, connected, ready, send }
 }

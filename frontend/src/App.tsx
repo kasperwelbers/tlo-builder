@@ -39,7 +39,7 @@ interface InnerProps {
 }
 
 function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
-  const { state, connected } = useApp()
+  const { state, connected, ready } = useApp()
   const [page, setPage] = useState<Page | null>(null)
 
   useEffect(() => {
@@ -69,6 +69,15 @@ function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
       return prev
     })
   }, [state.trajectories, state.courses])
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" />
+        <p className="text-sm text-muted-foreground">Connecting to project…</p>
+      </div>
+    )
+  }
 
   return (
     <NavProvider onNavigate={setPage}>

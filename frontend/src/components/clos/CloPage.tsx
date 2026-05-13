@@ -1,18 +1,32 @@
 import { useState } from "react"
-import { GripVertical, Plus, Trash2 } from "lucide-react"
+import { GripVertical, HelpCircle, Plus, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { DndContext, DragOverlay, useDraggable, useDroppable, type DragEndEvent } from "@dnd-kit/core"
+import {
+  DndContext,
+  DragOverlay,
+  useDraggable,
+  useDroppable,
+  type DragEndEvent,
+} from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
 import { CloSection } from "./CloSection"
 import { CloFormDialog } from "./CloFormDialog"
 import { IloItem } from "@/components/tlos/IloItem"
 import { useApp } from "@/context/AppContext"
+import { useHelp } from "@/context/HelpContext"
 import { bloomSortKey } from "@/lib/bloomLevels"
 import { cn } from "@/lib/utils"
 import type { Ilo } from "@/lib/types"
@@ -24,8 +38,11 @@ interface Props {
 // ── Draggable ILO row (used in the unlinked/course-level area) ──────────────
 function DraggableIloRow({ ilo }: { ilo: Ilo }) {
   const { send } = useApp()
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: ilo.id })
-  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id: ilo.id })
+  const style = transform
+    ? { transform: CSS.Translate.toString(transform) }
+    : undefined
 
   return (
     <div
@@ -36,13 +53,13 @@ function DraggableIloRow({ ilo }: { ilo: Ilo }) {
       <button
         {...listeners}
         {...attributes}
-        className="px-1 py-1.5 cursor-grab text-muted-foreground/40 hover:text-muted-foreground transition-colors shrink-0"
+        className="shrink-0 cursor-grab px-1 py-1.5 text-muted-foreground/40 transition-colors hover:text-muted-foreground"
         tabIndex={-1}
         aria-label="Drag to reorder"
       >
         <GripVertical className="size-4" />
       </button>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <IloItem
           ilo={ilo}
           variant="course"
@@ -54,20 +71,31 @@ function DraggableIloRow({ ilo }: { ilo: Ilo }) {
 }
 
 // ── Drop zone for course-level (unlinked) ILOs ──────────────────────────────
-function CourseLevelDropZone({ children, isEmpty }: { children: React.ReactNode; isEmpty: boolean }) {
+function CourseLevelDropZone({
+  children,
+  isEmpty,
+}: {
+  children: React.ReactNode
+  isEmpty: boolean
+}) {
   const { isOver, setNodeRef } = useDroppable({ id: "course-level" })
   return (
     <div
       ref={setNodeRef}
       className={cn(
         "rounded-lg border border-dashed transition-all",
-        isOver && "border-primary/60 bg-primary/5 ring-2 ring-primary/30 ring-offset-1",
-        isEmpty ? "p-4 min-h-16 flex items-center justify-center" : "p-2"
+        isOver &&
+          "border-primary/60 bg-primary/5 ring-2 ring-primary/30 ring-offset-1",
+        isEmpty ? "flex min-h-16 items-center justify-center p-4" : "p-2"
       )}
     >
       {isEmpty ? (
-        <p className={cn("text-xs text-muted-foreground italic", isOver && "text-primary")}>
-        </p>
+        <p
+          className={cn(
+            "text-xs text-muted-foreground italic",
+            isOver && "text-primary"
+          )}
+        ></p>
       ) : (
         children
       )}
@@ -78,18 +106,21 @@ function CourseLevelDropZone({ children, isEmpty }: { children: React.ReactNode;
 // ── Main page ───────────────────────────────────────────────────────────────
 export function CloPage({ courseId }: Props) {
   const { state, send } = useApp()
+  const { openHelp } = useHelp()
 
-  const course = state.courses.find(c => c.id === courseId)
-  const courseClos = state.clos.filter(c => c.courseId === courseId)
+  const course = state.courses.find((c) => c.id === courseId)
+  const courseClos = state.clos.filter((c) => c.courseId === courseId)
 
   // Build mapping views
-  const courseMappings = state.iloCloMappings.filter(m => m.courseId === courseId)
-  const iloById = new Map(state.ilos.map(i => [i.id, i]))
+  const courseMappings = state.iloCloMappings.filter(
+    (m) => m.courseId === courseId
+  )
+  const iloById = new Map(state.ilos.map((i) => [i.id, i]))
 
   // ILOs linked at course level (cloId === null)
   const unlinkedIlos = courseMappings
-    .filter(m => m.cloId === null)
-    .map(m => iloById.get(m.iloId))
+    .filter((m) => m.cloId === null)
+    .map((m) => iloById.get(m.iloId))
     .filter((i): i is Ilo => i !== undefined)
     .sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel))
 
@@ -104,11 +135,18 @@ export function CloPage({ courseId }: Props) {
     ilosByCloId.set(m.cloId, arr)
   }
   for (const [cloId, arr] of ilosByCloId) {
-    ilosByCloId.set(cloId, arr.sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel)))
+    ilosByCloId.set(
+      cloId,
+      arr.sort(
+        (a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel)
+      )
+    )
   }
 
   // Header inline-editing state
-  const [editingField, setEditingField] = useState<"code" | "name" | "coordinator" | "start" | "end" | null>(null)
+  const [editingField, setEditingField] = useState<
+    "code" | "name" | "coordinator" | "start" | "end" | null
+  >(null)
   const [editValue, setEditValue] = useState("")
 
   // CLO dialog
@@ -120,7 +158,10 @@ export function CloPage({ courseId }: Props) {
 
   if (!course) return null
 
-  function handleStartEdit(field: "code" | "name" | "coordinator" | "start" | "end", value: string) {
+  function handleStartEdit(
+    field: "code" | "name" | "coordinator" | "start" | "end",
+    value: string
+  ) {
     setEditingField(field)
     setEditValue(value)
   }
@@ -133,9 +174,13 @@ export function CloPage({ courseId }: Props) {
       code: editingField === "code" ? editValue : course!.code,
       name: editingField === "name" ? editValue : course!.name,
       color: course!.color,
-      coordinator: editingField === "coordinator" ? (editValue.trim() || null) : course!.coordinator,
-      start: editingField === "start" ? (editValue.trim() || null) : course!.start,
-      end: editingField === "end" ? (editValue.trim() || null) : course!.end,
+      coordinator:
+        editingField === "coordinator"
+          ? editValue.trim() || null
+          : course!.coordinator,
+      start:
+        editingField === "start" ? editValue.trim() || null : course!.start,
+      end: editingField === "end" ? editValue.trim() || null : course!.end,
     })
     setEditingField(null)
   }
@@ -158,24 +203,82 @@ export function CloPage({ courseId }: Props) {
     if (!over) return
     const iloId = active.id as number
     const targetCloId = over.id === "course-level" ? null : (over.id as number)
-    send({ type: "ilo_clo_mapping:add", iloId, courseId: course!.id, cloId: targetCloId })
+    send({
+      type: "ilo_clo_mapping:add",
+      iloId,
+      courseId: course!.id,
+      cloId: targetCloId,
+    })
   }
 
   return (
-    <div className="space-y-6 pt-6">
-      {/* ── Course header ─────────────────────────────────────────────────── */}
-      <div className="space-y-2">
+    <div className="">
+      <div className="flex items-center gap-3">
+        <h2 className="font-semibold text-foreground/60">Course</h2>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6 text-muted-foreground/50 hover:text-muted-foreground"
+          onClick={() => openHelp("courses")}
+          aria-label="Help: course page"
+        >
+          <HelpCircle className="size-4" />
+        </Button>
+        {/* Action row */}
+        <div className="flex items-center justify-end gap-2">
+          <ColorPicker
+            value={course.color}
+            onChange={handleColorChange}
+            shape="square"
+          />
 
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete course "{course.code}"?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete all {courseClos.length} CLO
+                  {courseClos.length !== 1 ? "s" : ""} in this course and their
+                  mappings.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() =>
+                    send({ type: "course:delete", courseId: course.id })
+                  }
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+      {/* ── Course header ─────────────────────────────────────────────────── */}
+      <div className="space-y-6 pt-1">
         {/* Title and description */}
         <div>
           {editingField === "code" ? (
             <Input
               value={editValue}
-              onChange={e => setEditValue(e.target.value)}
-              className="text-2xl font-bold h-auto border-0 shadow-none focus-visible:ring-0 px-1"
+              onChange={(e) => setEditValue(e.target.value)}
+              className="h-auto border-0 px-1 text-2xl font-bold shadow-none focus-visible:ring-0"
               autoFocus
               onBlur={handleSave}
-              onKeyDown={e => {
+              onKeyDown={(e) => {
                 if (e.key === "Enter") handleSave()
                 if (e.key === "Escape") setEditingField(null)
               }}
@@ -184,7 +287,7 @@ export function CloPage({ courseId }: Props) {
             <h1
               role="button"
               tabIndex={0}
-              className="text-2xl font-bold cursor-pointer rounded px-1 hover:bg-muted/50"
+              className="cursor-pointer rounded px-1 text-2xl font-bold hover:bg-muted/50"
               onClick={() => handleStartEdit("code", course.code)}
             >
               {course.code}
@@ -194,11 +297,11 @@ export function CloPage({ courseId }: Props) {
           {editingField === "name" ? (
             <Input
               value={editValue}
-              onChange={e => setEditValue(e.target.value)}
+              onChange={(e) => setEditValue(e.target.value)}
               className="mt-1 text-sm text-muted-foreground"
               autoFocus
               onBlur={handleSave}
-              onKeyDown={e => {
+              onKeyDown={(e) => {
                 if (e.key === "Enter") handleSave()
                 if (e.key === "Escape") setEditingField(null)
               }}
@@ -207,26 +310,28 @@ export function CloPage({ courseId }: Props) {
             <p
               role="button"
               tabIndex={0}
-              className="mt-1 text-sm text-muted-foreground cursor-pointer rounded px-1 hover:bg-muted/50"
+              className="mt-1 cursor-pointer rounded px-1 text-sm text-muted-foreground hover:bg-muted/50"
               onClick={() => handleStartEdit("name", course.name || "")}
             >
-              {course.name || <span className="italic opacity-50">Full course name</span>}
+              {course.name || (
+                <span className="italic opacity-50">Full course name</span>
+              )}
             </p>
           )}
 
           {/* Coordinator / Start / End meta row */}
-          <div className="mt-2 flex flex-wrap gap-4">
+          <div className="mt-2 ml-1 flex flex-wrap gap-4">
             {/* Coordinator */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="font-medium shrink-0">Coordinator:</span>
+              <span className="shrink-0 font-medium">Coordinator:</span>
               {editingField === "coordinator" ? (
                 <Input
                   value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
+                  onChange={(e) => setEditValue(e.target.value)}
                   className="h-6 w-40 border-0 px-1 text-xs focus-visible:ring-1"
                   autoFocus
                   onBlur={handleSave}
-                  onKeyDown={e => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") handleSave()
                     if (e.key === "Escape") setEditingField(null)
                   }}
@@ -236,25 +341,29 @@ export function CloPage({ courseId }: Props) {
                   role="button"
                   tabIndex={0}
                   className="cursor-pointer rounded px-1 hover:bg-muted/50"
-                  onClick={() => handleStartEdit("coordinator", course.coordinator || "")}
+                  onClick={() =>
+                    handleStartEdit("coordinator", course.coordinator || "")
+                  }
                 >
-                  {course.coordinator || <span className="italic opacity-50">—</span>}
+                  {course.coordinator || (
+                    <span className="italic opacity-50">—</span>
+                  )}
                 </span>
               )}
             </div>
 
             {/* Start */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="font-medium shrink-0">Start:</span>
+              <span className="shrink-0 font-medium">Start:</span>
               {editingField === "start" ? (
                 <Input
                   value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
+                  onChange={(e) => setEditValue(e.target.value)}
                   className="h-6 w-20 border-0 px-1 text-xs focus-visible:ring-1"
                   autoFocus
                   placeholder="e.g. 2-1"
                   onBlur={handleSave}
-                  onKeyDown={e => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") handleSave()
                     if (e.key === "Escape") setEditingField(null)
                   }}
@@ -273,16 +382,16 @@ export function CloPage({ courseId }: Props) {
 
             {/* End */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="font-medium shrink-0">End:</span>
+              <span className="shrink-0 font-medium">End:</span>
               {editingField === "end" ? (
                 <Input
                   value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
+                  onChange={(e) => setEditValue(e.target.value)}
                   className="h-6 w-20 border-0 px-1 text-xs focus-visible:ring-1"
                   autoFocus
                   placeholder="e.g. 2-4"
                   onBlur={handleSave}
-                  onKeyDown={e => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") handleSave()
                     if (e.key === "Escape") setEditingField(null)
                   }}
@@ -298,34 +407,6 @@ export function CloPage({ courseId }: Props) {
                 </span>
               )}
             </div>
-
-          </div>
-
-          {/* Action row */}
-          <div className="flex items-center justify-end gap-2">
-            <ColorPicker value={course.color} onChange={handleColorChange} shape="square" />
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                  <Trash2 className="size-4" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete course "{course.code}"?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will delete all {courseClos.length} CLO{courseClos.length !== 1 ? "s" : ""} in this course and their mappings.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => send({ type: "course:delete", courseId: course.id })}>
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         </div>
       </div>
@@ -333,18 +414,21 @@ export function CloPage({ courseId }: Props) {
       {/* ── DnD context ───────────────────────────────────────────────────── */}
       <DndContext
         onDragStart={({ active }) => setActiveIloId(active.id as number)}
-        onDragEnd={e => { handleDragEnd(e); setActiveIloId(null) }}
+        onDragEnd={(e) => {
+          handleDragEnd(e)
+          setActiveIloId(null)
+        }}
         onDragCancel={() => setActiveIloId(null)}
       >
-        <div className="space-y-4">
+        <div className="space-y-4 pt-6">
           {/* Course-level (unlinked) ILOs */}
           <div className="space-y-1.5">
-            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground px-1">
+            <h3 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground">
               ILOs without CLOs
             </h3>
             <CourseLevelDropZone isEmpty={unlinkedIlos.length === 0}>
               <div className="py-1">
-                {unlinkedIlos.map(ilo => (
+                {unlinkedIlos.map((ilo) => (
                   <DraggableIloRow key={ilo.id} ilo={ilo} />
                 ))}
               </div>
@@ -354,7 +438,7 @@ export function CloPage({ courseId }: Props) {
           {/* One CloSection per CLO */}
           {courseClos.length > 0 && (
             <div className="space-y-3">
-              {courseClos.map(clo => (
+              {courseClos.map((clo) => (
                 <CloSection
                   key={clo.id}
                   clo={clo}
@@ -372,7 +456,7 @@ export function CloPage({ courseId }: Props) {
             className="w-full border-dashed text-muted-foreground hover:text-foreground"
             onClick={() => setCloDialogOpen(true)}
           >
-            <Plus className="size-4 mr-1" />
+            <Plus className="mr-1 size-4" />
             Add CLO
           </Button>
         </div>
@@ -380,8 +464,10 @@ export function CloPage({ courseId }: Props) {
         {/* Drag overlay */}
         <DragOverlay>
           {activeIlo && (
-            <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-sm font-medium opacity-90 max-w-xs truncate">
-              {activeIlo.description || <span className="italic opacity-50">No description</span>}
+            <div className="max-w-xs truncate rounded-md border bg-background px-3 py-2 text-sm font-medium opacity-90 shadow-lg">
+              {activeIlo.description || (
+                <span className="italic opacity-50">No description</span>
+              )}
             </div>
           )}
         </DragOverlay>
@@ -390,9 +476,9 @@ export function CloPage({ courseId }: Props) {
       {/* CLO form dialog */}
       <CloFormDialog
         open={cloDialogOpen}
-        onOpenChange={open => setCloDialogOpen(open)}
+        onOpenChange={(open) => setCloDialogOpen(open)}
         initialData={{ courseId }}
-        onSubmit={data => {
+        onSubmit={(data) => {
           send({ type: "clo:add", ...data })
           setCloDialogOpen(false)
         }}

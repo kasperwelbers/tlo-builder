@@ -5,6 +5,7 @@ import type { AppState } from '@/lib/types'
 interface AppContextValue {
   state: AppState
   connected: boolean
+  ready: boolean
   send: (data: object) => void
 }
 
@@ -17,10 +18,10 @@ export function AppProvider({
   projectId: string
   children: React.ReactNode
 }) {
-  const { state, connected, send } = useWebSocket(projectId)
+  const { state, connected, ready, send } = useWebSocket(projectId)
 
   return (
-    <AppContext.Provider value={{ state, connected, send }}>
+    <AppContext.Provider value={{ state, connected, ready, send }}>
       {children}
     </AppContext.Provider>
   )
