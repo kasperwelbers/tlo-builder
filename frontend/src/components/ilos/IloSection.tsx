@@ -25,14 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +42,7 @@ import { CSS } from "@dnd-kit/utilities"
 import { IloItem } from "@/components/tlos/IloItem"
 import { useApp } from "@/context/AppContext"
 import { CurrentIloLinkTloDialog } from "./CurrentIloLinkTloDialog"
+import { NewIloDialog } from "./NewIloDialog"
 import { bloomBadgeClass } from "@/lib/bloomColors"
 import { cn } from "@/lib/utils"
 import type { CurrentIlo, Ilo } from "@/lib/types"
@@ -119,6 +113,7 @@ export function IloSection({ currentIlo, ilos, onDelete }: Props) {
 
   const [collapsed, setCollapsed] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
+  const [newIloOpen, setNewIloOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editDescription, setEditDescription] = useState("")
   const [editBloom, setEditBloom] = useState("")
@@ -137,26 +132,6 @@ export function IloSection({ currentIlo, ilos, onDelete }: Props) {
       bloomLevel: editBloom || null,
     })
     setEditOpen(false)
-  }
-
-  // TLOs grouped by trajectory for the "New ILO" popover
-  const trajectoryGroups = [...state.trajectories]
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-    .map((traj) => ({
-      trajectory: traj,
-      tlos: state.tlos.filter((t) => t.trajectoryId === traj.id),
-    }))
-    .filter((g) => g.tlos.length > 0)
-
-  function handleCreateIlo(tloId: number) {
-    send({
-      type: "ilo:create",
-      tloId,
-      description: "",
-      bloomLevel: null,
-      currentIloId: currentIlo.id,
-      courseId: currentIlo.courseId,
-    })
   }
 
   // Bloom level background -- same palette as TLO sections
@@ -258,50 +233,27 @@ export function IloSection({ currentIlo, ilos, onDelete }: Props) {
             <Link2 className="mr-1 size-3.5" /> Existing ILO
           </Button>
 
-          {/* New ILO — dropdown with TLO list */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none">
-              <Plus className="size-3.5" /> New ILO
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="max-h-72 w-64 overflow-y-auto"
-            >
-              {trajectoryGroups.length === 0 ? (
-                <DropdownMenuItem disabled>
-                  No trajectories yet.
-                </DropdownMenuItem>
-              ) : (
-                trajectoryGroups.map(({ trajectory, tlos }) => (
-                  <div key={trajectory.id}>
-                    <DropdownMenuLabel className="flex items-center gap-2 py-1.5">
-                      <span
-                        className="size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: trajectory.color }}
-                      />
-                      <span className="text-xs">{trajectory.name}</span>
-                    </DropdownMenuLabel>
-                    {tlos.map((tlo) => (
-                      <DropdownMenuItem
-                        key={tlo.id}
-                        onSelect={() => handleCreateIlo(tlo.id)}
-                        className="pl-6 text-xs"
-                      >
-                        {tlo.name}
-                      </DropdownMenuItem>
-                    ))}
-                    <DropdownMenuSeparator />
-                  </div>
-                ))
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* New ILO — opens dialog */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => setNewIloOpen(true)}
+          >
+            <Plus className="mr-1 size-3.5" /> New ILO
+          </Button>
         </div>
       )}
 
       <CurrentIloLinkTloDialog
         open={linkOpen}
         onOpenChange={setLinkOpen}
+        currentIlo={currentIlo}
+      />
+
+      <NewIloDialog
+        open={newIloOpen}
+        onOpenChange={setNewIloOpen}
         currentIlo={currentIlo}
       />
 
