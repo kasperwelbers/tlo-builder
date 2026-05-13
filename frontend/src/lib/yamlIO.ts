@@ -4,18 +4,25 @@ import type { AppState } from "@/lib/types"
 // -- Export -------------------------------------------------------------------
 
 export function exportToYaml(state: AppState, projectName: string): void {
-  const { tlos, ilos, clos, iloCloMappings, trajectories, courses } = state
+  const {
+    tlos,
+    ilos,
+    currentIlos,
+    iloCurrentIloMappings,
+    trajectories,
+    courses,
+  } = state
   const tloIloMappings = ilos
     .filter((i) => i.tloId !== null)
     .map((i) => ({ tloId: i.tloId!, iloId: i.id }))
 
   const courseById = new Map(courses.map((c) => [c.id, c]))
-  const coById = new Map(clos.map((co) => [co.id, co]))
+  const coById = new Map(currentIlos.map((co) => [co.id, co]))
 
   const iloCoMap = new Map<number, { course: string; description: string }[]>()
-  for (const mapping of iloCloMappings) {
-    if (mapping.cloId === null) continue // course-level links have no CLO
-    const co = coById.get(mapping.cloId)
+  for (const mapping of iloCurrentIloMappings) {
+    if (mapping.currentIloId === null) continue // course-level links have no Current ILO
+    const co = coById.get(mapping.currentIloId)
     if (!co) continue
     const courseCode = courseById.get(co.courseId)?.code ?? ""
     if (!courseCode) continue
@@ -54,7 +61,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
               description: ilo.description,
               bloom_level: ilo.bloomLevel ?? null,
             }
-            if (coRefs?.length) entry.course_objectives = coRefs
+            if (coRefs?.length) entry.current_ilos = coRefs
             return entry
           })
         const tloEntry: Record<string, unknown> = {
@@ -88,7 +95,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
   const doc = {
     exported: new Date().toISOString(),
     courses: coursesOutput,
-    course_objectives: clos.map((co) => ({
+    current_ilos: currentIlos.map((co) => ({
       course: courseById.get(co.courseId)?.code ?? "",
       description: co.description,
       bloom_level: co.bloomLevel ?? null,

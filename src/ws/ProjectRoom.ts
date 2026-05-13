@@ -1,41 +1,62 @@
-import { DurableObject } from 'cloudflare:workers'
-import { type Env } from '../types'
-import { getDb } from '../db'
-import { eq } from 'drizzle-orm'
-import { projects, trajectories, tlos, ilos, clos, iloCloMappings, courses, tloIloMappings } from '../db/schema'
-import { handleMessage, type SyncTable } from './handlers'
+import { DurableObject } from "cloudflare:workers"
+import { type Env } from "../types"
+import { getDb } from "../db"
+import { eq } from "drizzle-orm"
+import {
+  projects,
+  trajectories,
+  tlos,
+  ilos,
+  currentIlos,
+  iloCurrentIloMappings,
+  courses,
+  tloIloMappings,
+  comments,
+  users,
+} from "../db/schema"
+import { handleMessage, type SyncTable } from "./handlers"
 
 export class ProjectRoom extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
 
     // WebSocket upgrade
-    const upgradeHeader = request.headers.get('Upgrade')
-    if (upgradeHeader !== 'websocket') {
-      return new Response('Expected WebSocket', { status: 426 })
+    const upgradeHeader = request.headers.get("Upgrade")
+    if (upgradeHeader !== "websocket") {
+      return new Response("Expected WebSocket", { status: 426 })
     }
 
-    const projectId = url.pathname.replace('/ws/', '')
+    const projectId = url.pathname.replace("/ws/", "")
     const { 0: client, 1: server } = new WebSocketPair()
 
     // Tag the socket with the projectId for per-project filtering
-    this.ctx.acceptWebSocket(server, [projectId])
+    const userId = request.headers.get("X-User-Id") ?? ""
+    this.ctx.acceptWebSocket(server, [projectId, userId])
 
     // Send full state immediately on connect
     const state = await this.getFullState(projectId)
-    server.send(JSON.stringify({ type: 'sync:all', data: state }))
+    server.send(JSON.stringify({ type: "sync:all", data: state }))
 
     return new Response(null, { status: 101, webSocket: client })
   }
 
-  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
-    const [projectId] = this.ctx.getTags(ws)
+  async webSocketMessage(
+    ws: WebSocket,
+    message: string | ArrayBuffer
+  ): Promise<void> {
+    const tags = this.ctx.getTags(ws)
+    const projectId = tags[0]
+    const userId = tags[1] ?? ""
     if (!projectId) return
 
     try {
-      const data = JSON.parse(typeof message === 'string' ? message : new TextDecoder().decode(message))
+      const data = JSON.parse(
+        typeof message === "string"
+          ? message
+          : new TextDecoder().decode(message)
+      )
       data.projectId = projectId
-      console.log(projectId)
+      data.userId = userId
 
       const db = getDb(this.env.DB)
       const affectedTables = await handleMessage(db, data)
@@ -46,41 +67,62 @@ export class ProjectRoom extends DurableObject<Env> {
       }
     } catch (error: any) {
       try {
-        ws.send(JSON.stringify({ type: 'sync:error', message: error?.message ?? 'Unknown error' }))
+        ws.send(
+          JSON.stringify({
+            type: "sync:error",
+            message: error?.message ?? "Unknown error",
+          })
+        )
       } catch (e) {}
     }
   }
 
-  async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
+  async webSocketClose(
+    ws: WebSocket,
+    code: number,
+    reason: string
+  ): Promise<void> {
     try {
       ws.close(code, reason)
     } catch (e) {}
   }
 
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
-    console.error('WebSocket error:', error)
+    console.error("WebSocket error:", error)
   }
 
   // -- Private helpers --------------------------------------------------------
 
-  private async broadcastTable(projectId: string, table: SyncTable): Promise<void> {
+  private async broadcastTable(
+    projectId: string,
+    table: SyncTable
+  ): Promise<void> {
     const db = getDb(this.env.DB)
     const data = await this.getTableData(db, projectId, table)
     const message = JSON.stringify({ type: `sync:${table}`, data })
     for (const ws of this.ctx.getWebSockets(projectId)) {
-      try { ws.send(message) } catch {}
+      try {
+        ws.send(message)
+      } catch {}
     }
   }
 
-  private async getTableData(db: ReturnType<typeof getDb>, projectId: string, table: SyncTable) {
+  private async getTableData(
+    db: ReturnType<typeof getDb>,
+    projectId: string,
+    table: SyncTable
+  ) {
     switch (table) {
-      case 'trajectories':
-        return db.select().from(trajectories).where(eq(trajectories.projectId, projectId))
-      case 'courses':
+      case "trajectories":
+        return db
+          .select()
+          .from(trajectories)
+          .where(eq(trajectories.projectId, projectId))
+      case "courses":
         return db.select().from(courses).where(eq(courses.projectId, projectId))
-      case 'tlos':
+      case "tlos":
         return db.select().from(tlos).where(eq(tlos.projectId, projectId))
-      case 'ilos':
+      case "ilos":
         return db
           .select({
             id: ilos.id,
@@ -92,10 +134,21 @@ export class ProjectRoom extends DurableObject<Env> {
           .from(ilos)
           .leftJoin(tloIloMappings, eq(tloIloMappings.iloId, ilos.id))
           .where(eq(ilos.projectId, projectId))
-      case 'clos':
-        return db.select().from(clos).where(eq(clos.projectId, projectId))
-      case 'ilo_clo_mappings':
-        return db.select().from(iloCloMappings).where(eq(iloCloMappings.projectId, projectId))
+      case "current_ilos":
+        return db
+          .select()
+          .from(currentIlos)
+          .where(eq(currentIlos.projectId, projectId))
+      case "ilo_current_ilo_mappings":
+        return db
+          .select()
+          .from(iloCurrentIloMappings)
+          .where(eq(iloCurrentIloMappings.projectId, projectId))
+      case "comments":
+        return db
+          .select()
+          .from(comments)
+          .where(eq(comments.projectId, projectId))
     }
   }
 
@@ -103,10 +156,24 @@ export class ProjectRoom extends DurableObject<Env> {
     const db = getDb(this.env.DB)
 
     // Ensure the project row exists
-    await db.insert(projects).values({ id: projectId, name: 'Untitled Project' }).onConflictDoNothing()
+    await db
+      .insert(projects)
+      .values({ id: projectId, name: "Untitled Project" })
+      .onConflictDoNothing()
 
-    const [allTrajectories, allCourses, allTlos, allIlos, allClos, allIloCloMappings] = await Promise.all([
-      db.select().from(trajectories).where(eq(trajectories.projectId, projectId)),
+    const [
+      allTrajectories,
+      allCourses,
+      allTlos,
+      allIlos,
+      allCurrentIlos,
+      allIloCurrentIloMappings,
+      allComments,
+    ] = await Promise.all([
+      db
+        .select()
+        .from(trajectories)
+        .where(eq(trajectories.projectId, projectId)),
       db.select().from(courses).where(eq(courses.projectId, projectId)),
       db.select().from(tlos).where(eq(tlos.projectId, projectId)),
       db
@@ -120,17 +187,22 @@ export class ProjectRoom extends DurableObject<Env> {
         .from(ilos)
         .leftJoin(tloIloMappings, eq(tloIloMappings.iloId, ilos.id))
         .where(eq(ilos.projectId, projectId)),
-      db.select().from(clos).where(eq(clos.projectId, projectId)),
-      db.select().from(iloCloMappings).where(eq(iloCloMappings.projectId, projectId)),
+      db.select().from(currentIlos).where(eq(currentIlos.projectId, projectId)),
+      db
+        .select()
+        .from(iloCurrentIloMappings)
+        .where(eq(iloCurrentIloMappings.projectId, projectId)),
+      db.select().from(comments).where(eq(comments.projectId, projectId)),
     ])
 
     return {
-      trajectories:   allTrajectories,
-      courses:        allCourses,
-      tlos:           allTlos,
-      ilos:           allIlos,
-      clos:           allClos,
-      iloCloMappings: allIloCloMappings,
+      trajectories: allTrajectories,
+      courses: allCourses,
+      tlos: allTlos,
+      ilos: allIlos,
+      currentIlos: allCurrentIlos,
+      iloCurrentIloMappings: allIloCurrentIloMappings,
+      comments: allComments,
     }
   }
 }

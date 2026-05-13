@@ -23,7 +23,7 @@ interface Props {
   }) => void
 }
 
-export function IloFormDialog({
+export function CurrentIloFormDialog({
   open,
   onOpenChange,
   initialData,
@@ -62,7 +62,7 @@ export function IloFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="current-ilo-description">Current ILO</Label>
+            <Label htmlFor="current-ilo-description">Description</Label>
             <Textarea
               id="current-ilo-description"
               value={description}

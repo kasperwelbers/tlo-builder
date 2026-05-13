@@ -25,11 +25,17 @@ export function OverviewPage() {
   const [selectedCell, setSelectedCell] = useState<CellKey | null>(null)
 
   const trajectories = useMemo(
-    () => [...state.trajectories].sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      [...state.trajectories].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true })
+      ),
     [state.trajectories]
   )
   const courses = useMemo(
-    () => [...state.courses].sort((a, b) => a.code.localeCompare(b.code)),
+    () =>
+      [...state.courses].sort((a, b) =>
+        a.code.localeCompare(b.code, undefined, { numeric: true })
+      ),
     [state.courses]
   )
 
@@ -47,13 +53,13 @@ export function OverviewPage() {
   // courseId → Set of ILO ids
   const iloIdsByCourse = useMemo(() => {
     const map = new Map<number, Set<number>>()
-    for (const m of state.iloCloMappings) {
+    for (const m of state.iloCurrentIloMappings) {
       const s = map.get(m.courseId) ?? new Set<number>()
       s.add(m.iloId)
       map.set(m.courseId, s)
     }
     return map
-  }, [state.iloCloMappings])
+  }, [state.iloCurrentIloMappings])
 
   // Pre-compute cell ILOs for every (course, trajectory) pair
   const cellIlos = useMemo(() => {
@@ -129,7 +135,7 @@ export function OverviewPage() {
                     >
                       <div className="flex flex-col items-center gap-1.5">
                         <OrderBadge
-                          num={i + 1}
+                          label={String.fromCharCode(65 + i)}
                           color={traj.color}
                           shape="circle"
                         />
@@ -146,7 +152,7 @@ export function OverviewPage() {
                     <td className="sticky left-0 z-10 border-r bg-card px-4 py-3 group-hover:bg-muted/40">
                       <div className="flex items-center gap-2">
                         <OrderBadge
-                          num={ci + 1}
+                          label={String(ci + 1)}
                           color={course.color}
                           shape="square"
                         />

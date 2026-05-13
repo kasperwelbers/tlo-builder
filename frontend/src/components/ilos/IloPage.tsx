@@ -1,5 +1,11 @@
 import { useState } from "react"
-import { GripVertical, HelpCircle, Plus, Trash2 } from "lucide-react"
+import {
+  GripVertical,
+  HelpCircle,
+  MessageSquare,
+  Plus,
+  Trash2,
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
@@ -22,8 +28,9 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core"
 import { CSS } from "@dnd-kit/utilities"
-import { CloSection } from "./CloSection"
-import { CloFormDialog } from "./CloFormDialog"
+import { IloSection } from "./IloSection"
+import { CurrentIloFormDialog } from "./CurrentIloFormDialog"
+import { CommentsDialog } from "@/components/CommentsDialog"
 import { IloItem } from "@/components/tlos/IloItem"
 import { useApp } from "@/context/AppContext"
 import { useHelp } from "@/context/HelpContext"
@@ -104,39 +111,43 @@ function CourseLevelDropZone({
 }
 
 // ── Main page ───────────────────────────────────────────────────────────────
-export function CloPage({ courseId }: Props) {
+export function IloPage({ courseId }: Props) {
   const { state, send } = useApp()
   const { openHelp } = useHelp()
 
   const course = state.courses.find((c) => c.id === courseId)
-  const courseClos = state.clos.filter((c) => c.courseId === courseId)
+  const courseCurrentIlos = state.currentIlos
+    .filter((c) => c.courseId === courseId)
+    .sort((a, b) =>
+      a.description.localeCompare(b.description, undefined, { numeric: true })
+    )
 
   // Build mapping views
-  const courseMappings = state.iloCloMappings.filter(
+  const courseMappings = state.iloCurrentIloMappings.filter(
     (m) => m.courseId === courseId
   )
   const iloById = new Map(state.ilos.map((i) => [i.id, i]))
 
   // ILOs linked at course level (cloId === null)
   const unlinkedIlos = courseMappings
-    .filter((m) => m.cloId === null)
+    .filter((m) => m.currentIloId === null)
     .map((m) => iloById.get(m.iloId))
     .filter((i): i is Ilo => i !== undefined)
     .sort((a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel))
 
-  // ILOs grouped by CLO id
-  const ilosByCloId = new Map<number, Ilo[]>()
+  // ILOs grouped by Current ILO id
+  const ilosByCurrentIloId = new Map<number, Ilo[]>()
   for (const m of courseMappings) {
-    if (m.cloId === null) continue
+    if (m.currentIloId === null) continue
     const ilo = iloById.get(m.iloId)
     if (!ilo) continue
-    const arr = ilosByCloId.get(m.cloId) ?? []
+    const arr = ilosByCurrentIloId.get(m.currentIloId) ?? []
     arr.push(ilo)
-    ilosByCloId.set(m.cloId, arr)
+    ilosByCurrentIloId.set(m.currentIloId, arr)
   }
-  for (const [cloId, arr] of ilosByCloId) {
-    ilosByCloId.set(
-      cloId,
+  for (const [currentIloId, arr] of ilosByCurrentIloId) {
+    ilosByCurrentIloId.set(
+      currentIloId,
       arr.sort(
         (a, b) => bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel)
       )
@@ -149,8 +160,11 @@ export function CloPage({ courseId }: Props) {
   >(null)
   const [editValue, setEditValue] = useState("")
 
-  // CLO dialog
+  // Current ILO dialog
   const [cloDialogOpen, setCloDialogOpen] = useState(false)
+
+  // Comments dialog
+  const [commentsOpen, setCommentsOpen] = useState(false)
 
   // DnD active item
   const [activeIloId, setActiveIloId] = useState<number | null>(null)
@@ -202,12 +216,13 @@ export function CloPage({ courseId }: Props) {
     const { active, over } = event
     if (!over) return
     const iloId = active.id as number
-    const targetCloId = over.id === "course-level" ? null : (over.id as number)
+    const targetCurrentIloId =
+      over.id === "course-level" ? null : (over.id as number)
     send({
-      type: "ilo_clo_mapping:add",
+      type: "ilo_current_ilo_mapping:add",
       iloId,
       courseId: course!.id,
-      cloId: targetCloId,
+      currentIloId: targetCurrentIloId,
     })
   }
 
@@ -215,6 +230,23 @@ export function CloPage({ courseId }: Props) {
     <div className="">
       <div className="flex items-center gap-3">
         <h2 className="pl-1 font-semibold text-foreground/60">Course</h2>
+        {/* Comments button */}
+        {(() => {
+          const count = state.comments.filter(
+            (c) => c.context === "course" && c.contextId === courseId
+          ).length
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={() => setCommentsOpen(true)}
+            >
+              <MessageSquare className="size-4" />
+              {count > 0 && <span className="text-xs">{count}</span>}
+            </Button>
+          )
+        })()}
         <Button
           variant="ghost"
           size="icon"
@@ -248,9 +280,9 @@ export function CloPage({ courseId }: Props) {
                   Delete course "{course.code}"?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will delete all {courseClos.length} CLO
-                  {courseClos.length !== 1 ? "s" : ""} in this course and their
-                  mappings.
+                  This will delete all {courseCurrentIlos.length} Current ILO
+                  {courseCurrentIlos.length !== 1 ? "s" : ""} in this course and
+                  their mappings.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -424,7 +456,7 @@ export function CloPage({ courseId }: Props) {
           {/* Course-level (unlinked) ILOs */}
           <div className="space-y-1.5">
             <h3 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground">
-              ILOs without CLOs
+              ILOs without current course objective
             </h3>
             <CourseLevelDropZone isEmpty={unlinkedIlos.length === 0}>
               <div className="py-1">
@@ -435,21 +467,23 @@ export function CloPage({ courseId }: Props) {
             </CourseLevelDropZone>
           </div>
 
-          {/* One CloSection per CLO */}
-          {courseClos.length > 0 && (
+          {/* One CurrentIloSection per Current ILO */}
+          {courseCurrentIlos.length > 0 && (
             <div className="space-y-3">
-              {courseClos.map((clo) => (
-                <CloSection
-                  key={clo.id}
-                  clo={clo}
-                  ilos={ilosByCloId.get(clo.id) ?? []}
-                  onDelete={() => send({ type: "clo:delete", id: clo.id })}
+              {courseCurrentIlos.map((currentIlo) => (
+                <IloSection
+                  key={currentIlo.id}
+                  currentIlo={currentIlo}
+                  ilos={ilosByCurrentIloId.get(currentIlo.id) ?? []}
+                  onDelete={() =>
+                    send({ type: "current_ilo:delete", id: currentIlo.id })
+                  }
                 />
               ))}
             </div>
           )}
 
-          {/* Add CLO */}
+          {/* Add Current ILO */}
           <Button
             variant="outline"
             size="sm"
@@ -457,7 +491,7 @@ export function CloPage({ courseId }: Props) {
             onClick={() => setCloDialogOpen(true)}
           >
             <Plus className="mr-1 size-4" />
-            Add CLO
+            Add Current ILO
           </Button>
         </div>
 
@@ -473,15 +507,21 @@ export function CloPage({ courseId }: Props) {
         </DragOverlay>
       </DndContext>
 
-      {/* CLO form dialog */}
-      <CloFormDialog
+      {/* Current ILO form dialog */}
+      <CurrentIloFormDialog
         open={cloDialogOpen}
         onOpenChange={(open) => setCloDialogOpen(open)}
         initialData={{ courseId }}
         onSubmit={(data) => {
-          send({ type: "clo:add", ...data })
+          send({ type: "current_ilo:add", ...data })
           setCloDialogOpen(false)
         }}
+      />
+      <CommentsDialog
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        context="course"
+        contextId={courseId}
       />
     </div>
   )

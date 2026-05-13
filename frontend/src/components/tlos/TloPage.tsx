@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { HelpCircle, Plus, Trash2 } from "lucide-react"
+import { HelpCircle, MessageSquare, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ColorPicker } from "@/components/ui/color-picker"
@@ -17,6 +17,7 @@ import {
 import { DndContext, DragOverlay, type DragEndEvent } from "@dnd-kit/core"
 import { TloSection } from "./TloSection"
 import { TloFormDialog } from "@/components/tlos/TloFormDialog"
+import { CommentsDialog } from "@/components/CommentsDialog"
 import { useApp } from "@/context/AppContext"
 import { useHelp } from "@/context/HelpContext"
 import type { Tlo } from "@/lib/types"
@@ -31,11 +32,19 @@ export function TrajectoryPage({ trajectoryId }: Props) {
 
   const trajectory = state.trajectories.find((t) => t.id === trajectoryId)
   const tlosForTrajectory = useMemo(
-    () => state.tlos.filter((t) => t.trajectoryId === trajectoryId),
+    () =>
+      [...state.tlos]
+        .filter((t) => t.trajectoryId === trajectoryId)
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { numeric: true })
+        ),
     [state.tlos, trajectoryId]
   )
   const trajectories = useMemo(
-    () => [...state.trajectories].sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      [...state.trajectories].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true })
+      ),
     [state.trajectories]
   )
 
@@ -48,6 +57,7 @@ export function TrajectoryPage({ trajectoryId }: Props) {
   const [addTloOpen, setAddTloOpen] = useState(false)
   const [editTlo, setEditTlo] = useState<Tlo | null>(null)
   const [activeIloId, setActiveIloId] = useState<number | null>(null)
+  const [commentsOpen, setCommentsOpen] = useState(false)
 
   const iloById = useMemo(
     () => new Map(state.ilos.map((i) => [i.id, i])),
@@ -100,6 +110,23 @@ export function TrajectoryPage({ trajectoryId }: Props) {
     <div className="">
       <div className="flex items-center gap-3">
         <h2 className="pl-1 font-bold text-foreground/60">Trajectory</h2>
+        {/* Comments button */}
+        {(() => {
+          const count = state.comments.filter(
+            (c) => c.context === "trajectory" && c.contextId === trajectory.id
+          ).length
+          return (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={() => setCommentsOpen(true)}
+            >
+              <MessageSquare className="size-4" />
+              {count > 0 && <span className="text-xs">{count}</span>}
+            </Button>
+          )
+        })()}
         <Button
           variant="ghost"
           size="icon"
@@ -243,7 +270,7 @@ export function TrajectoryPage({ trajectoryId }: Props) {
                       (a, b) =>
                         bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel)
                     )}
-                  clos={state.clos}
+                  currentIlos={state.currentIlos}
                   draggingIloId={activeIloId}
                   onEdit={() => {
                     setEditTlo(tlo)
@@ -296,6 +323,12 @@ export function TrajectoryPage({ trajectoryId }: Props) {
           }
           setEditTlo(null)
         }}
+      />
+      <CommentsDialog
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        context="trajectory"
+        contextId={trajectory.id}
       />
     </div>
   )

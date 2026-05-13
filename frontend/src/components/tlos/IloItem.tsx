@@ -4,10 +4,21 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BloomSelect } from "@/components/ui/bloom-select"
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { OrderBadge } from "@/components/ui/order-badge"
 import { IloLinkDialog } from "./IloLinkDialog"
 import { useApp } from "@/context/AppContext"
@@ -20,23 +31,33 @@ interface IloItemProps {
   variant?: "trajectory" | "course"
 }
 
-export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps) {
+export function IloItem({
+  ilo,
+  onDelete,
+  variant = "trajectory",
+}: IloItemProps) {
   const { state, send } = useApp()
   const { navigateTo } = useNav()
   const [editingField, setEditingField] = useState<"description" | null>(null)
   const [editValue, setEditValue] = useState("")
   const [linkOpen, setLinkOpen] = useState(false)
 
-  const courseById = new Map(state.courses.map(c => [c.id, c]))
-  const sortedCourses = [...state.courses].sort((a, b) => a.name.localeCompare(b.name))
+  const courseById = new Map(state.courses.map((c) => [c.id, c]))
+  const sortedCourses = [...state.courses].sort((a, b) =>
+    a.code.localeCompare(b.code, undefined, { numeric: true })
+  )
   const courseOrderNum = new Map(sortedCourses.map((c, i) => [c.id, i + 1]))
-  const cloById = new Map(state.clos.map(c => [c.id, c]))
-  const mappings = state.iloCloMappings.filter(m => m.iloId === ilo.id)
+  const currentIloById = new Map(state.currentIlos.map((c) => [c.id, c]))
+  const mappings = state.iloCurrentIloMappings.filter((m) => m.iloId === ilo.id)
 
-  const tloById = new Map(state.tlos.map(t => [t.id, t]))
-  const trajectoryById = new Map(state.trajectories.map(t => [t.id, t]))
-  const sortedTrajectories = [...state.trajectories].sort((a, b) => a.name.localeCompare(b.name))
-  const trajectoryOrderNum = new Map(sortedTrajectories.map((t, i) => [t.id, i + 1]))
+  const tloById = new Map(state.tlos.map((t) => [t.id, t]))
+  const trajectoryById = new Map(state.trajectories.map((t) => [t.id, t]))
+  const sortedTrajectories = [...state.trajectories].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true })
+  )
+  const trajectoryOrderLabel = new Map(
+    sortedTrajectories.map((t, i) => [t.id, String.fromCharCode(65 + i)])
+  )
 
   function handleStartEdit(value: string) {
     setEditingField("description")
@@ -69,22 +90,25 @@ export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps)
 
   return (
     <>
-      <div className="flex items-center gap-3 rounded-md px-3 py-1.5 hover:bg-muted/50 group w-full">
+      <div className="group flex w-full items-center gap-3 rounded-md px-3 py-1.5 hover:bg-muted/50">
         {/* Bloom level */}
         <div className="shrink-0">
-          <BloomSelect value={ilo.bloomLevel || ""} onValueChange={handleBloomChange} />
+          <BloomSelect
+            value={ilo.bloomLevel || ""}
+            onValueChange={handleBloomChange}
+          />
         </div>
 
         {/* Description */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           {editingField === "description" ? (
             <Input
               value={editValue}
-              onChange={e => setEditValue(e.target.value)}
-              className="h-6 text-xs w-full"
+              onChange={(e) => setEditValue(e.target.value)}
+              className="h-6 w-full text-xs"
               autoFocus
               onBlur={handleSave}
-              onKeyDown={e => {
+              onKeyDown={(e) => {
                 if (e.key === "Enter") handleSave()
                 if (e.key === "Escape") setEditingField(null)
               }}
@@ -93,25 +117,30 @@ export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps)
             <div
               role="button"
               tabIndex={0}
-              className="text-xs font-medium cursor-pointer px-1 py-0.5 rounded hover:bg-muted line-clamp-2"
+              className="line-clamp-2 cursor-pointer rounded px-1 py-0.5 text-xs font-medium hover:bg-muted"
               onClick={() => handleStartEdit(ilo.description || "")}
-              onKeyDown={e => { if (e.key === "Enter") handleStartEdit(ilo.description || "") }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleStartEdit(ilo.description || "")
+              }}
             >
-              {ilo.description || <span className="italic opacity-50 font-normal">The student can…</span>}
+              {ilo.description || (
+                <span className="font-normal italic opacity-50">
+                  The student can…
+                </span>
+              )}
             </div>
           )}
         </div>
 
         {/* Right side: delete (hover) | badges | link */}
-        <div className="shrink-0 flex items-center gap-1.5">
-
+        <div className="flex shrink-0 items-center gap-1.5">
           {/* Delete (hover only) */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
+                className="size-7 shrink-0 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
               >
                 <Trash2 className="size-3.5" />
               </Button>
@@ -120,7 +149,8 @@ export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps)
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete this ILO and remove all its mappings.
+                  This will permanently delete this ILO and remove all its
+                  mappings.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -131,52 +161,81 @@ export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps)
           </AlertDialog>
 
           {/* Badge: TLO (circle) on course page, course (square) on trajectory page */}
-          {variant === "course" ? (() => {
-            const tlo = ilo.tloId != null ? tloById.get(ilo.tloId) : null
-            const trajectory = tlo ? trajectoryById.get(tlo.trajectoryId) : null
-            if (!tlo || !trajectory) return null
-            return (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className="shrink-0 rounded-full ring-offset-background hover:ring-2 hover:ring-ring hover:ring-offset-1 transition-all focus:outline-none"
-                    onClick={() => navigateTo({ type: "trajectory", id: trajectory.id })}
-                    aria-label={"Go to " + trajectory.name}
-                  >
-                    <OrderBadge num={trajectoryOrderNum.get(trajectory.id) ?? 0} color={trajectory.color} shape="circle" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-52">
-                  <p className="font-medium text-xs">{trajectory.name}</p>
-                  <p className="text-xs opacity-75 leading-snug">{tlo.name}</p>
-                </TooltipContent>
-              </Tooltip>
-            )
-          })() : mappings.map(m => {
-            const course = courseById.get(m.courseId)
-            if (!course) return null
-            const clo = m.cloId != null ? cloById.get(m.cloId) : null
-            return (
-              <Tooltip key={m.courseId}>
-                <TooltipTrigger asChild>
-                  <button
-                    className="shrink-0 rounded-sm ring-offset-background hover:ring-2 hover:ring-ring hover:ring-offset-1 transition-all focus:outline-none"
-                    onClick={() => navigateTo({ type: "course", id: course.id })}
-                    aria-label={"Go to " + course.code}
-                  >
-                    <OrderBadge num={courseOrderNum.get(course.id) ?? 0} color={course.color} shape="square" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-52">
-                  <p className="font-medium text-xs">{course.code}{course.name ? `: ${course.name}` : ''}</p>
-                  {clo
-                    ? <p className="text-xs opacity-75 leading-snug">{clo.description}</p>
-                    : <p className="text-xs opacity-60 italic">Course level</p>
-                  }
-                </TooltipContent>
-              </Tooltip>
-            )
-          })}
+          {variant === "course"
+            ? (() => {
+                const tlo = ilo.tloId != null ? tloById.get(ilo.tloId) : null
+                const trajectory = tlo
+                  ? trajectoryById.get(tlo.trajectoryId)
+                  : null
+                if (!tlo || !trajectory) return null
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="shrink-0 rounded-full ring-offset-background transition-all hover:ring-2 hover:ring-ring hover:ring-offset-1 focus:outline-none"
+                        onClick={() =>
+                          navigateTo({ type: "trajectory", id: trajectory.id })
+                        }
+                        aria-label={"Go to " + trajectory.name}
+                      >
+                        <OrderBadge
+                          label={trajectoryOrderLabel.get(trajectory.id) ?? "?"}
+                          color={trajectory.color}
+                          shape="circle"
+                        />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-52">
+                      <p className="text-xs font-medium">{trajectory.name}</p>
+                      <p className="text-xs leading-snug opacity-75">
+                        {tlo.name}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })()
+            : mappings.map((m) => {
+                const course = courseById.get(m.courseId)
+                if (!course) return null
+                const currentIlo =
+                  m.currentIloId != null
+                    ? currentIloById.get(m.currentIloId)
+                    : null
+                return (
+                  <Tooltip key={m.courseId}>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="shrink-0 rounded-sm ring-offset-background transition-all hover:ring-2 hover:ring-ring hover:ring-offset-1 focus:outline-none"
+                        onClick={() =>
+                          navigateTo({ type: "course", id: course.id })
+                        }
+                        aria-label={"Go to " + course.code}
+                      >
+                        <OrderBadge
+                          label={String(courseOrderNum.get(course.id) ?? 0)}
+                          color={course.color}
+                          shape="square"
+                        />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-52">
+                      <p className="text-xs font-medium">
+                        {course.code}
+                        {course.name ? `: ${course.name}` : ""}
+                      </p>
+                      {currentIlo ? (
+                        <p className="text-xs leading-snug opacity-75">
+                          {currentIlo.description}
+                        </p>
+                      ) : (
+                        <p className="text-xs italic opacity-60">
+                          Course level
+                        </p>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
 
           {/* Link button — workspace only */}
           {variant === "trajectory" && (
@@ -185,7 +244,7 @@ export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps)
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
                   onClick={() => setLinkOpen(true)}
                 >
                   <Link2 className="size-3.5" />
@@ -194,7 +253,6 @@ export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps)
               <TooltipContent side="top">Manage links</TooltipContent>
             </Tooltip>
           )}
-
         </div>
       </div>
 
@@ -204,7 +262,7 @@ export function IloItem({ ilo, onDelete, variant = "trajectory" }: IloItemProps)
           open={linkOpen}
           onOpenChange={setLinkOpen}
           ilo={ilo}
-          clos={state.clos}
+          currentIlos={state.currentIlos}
         />
       )}
     </>

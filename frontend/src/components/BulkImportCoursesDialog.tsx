@@ -21,7 +21,7 @@ interface Row {
   start: string
   end: string
   coordinator: string
-  clo: string
+  currentIlo: string
   color: string
 }
 
@@ -32,7 +32,7 @@ function makeRow(): Row {
     start: "",
     end: "",
     coordinator: "",
-    clo: "",
+    currentIlo: "",
     color: randomColor(),
   }
 }
@@ -94,7 +94,7 @@ const PASTE_COLUMNS: (keyof Omit<Row, "color">)[] = [
   "start",
   "end",
   "coordinator",
-  "clo",
+  "currentIlo",
 ]
 
 interface Props {
@@ -165,7 +165,8 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
         end: string | null
         coordinator: string | null
         color: string
-        clos: string[]
+        // snake_case key matches what the backend handler reads
+        current_ilos: string[]
       }
     >()
 
@@ -179,21 +180,24 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
           end: row.end.trim() || null,
           coordinator: row.coordinator.trim() || null,
           color: row.color,
-          clos: [],
+          current_ilos: [],
         })
       }
-      const cloText = row.clo.trim()
-      if (cloText) courseMap.get(code)!.clos.push(cloText)
+      const currentIloText = row.currentIlo.trim()
+      if (currentIloText) courseMap.get(code)!.current_ilos.push(currentIloText)
     }
 
     const courseList = Array.from(courseMap.values())
     send({ type: "course:bulk_create", courses: courseList })
 
     const courseCount = courseList.length
-    const cloCount = courseList.reduce((n, c) => n + c.clos.length, 0)
+    const currentIloCount = courseList.reduce(
+      (n, c) => n + c.current_ilos.length,
+      0
+    )
     toast.success(
-      cloCount > 0
-        ? `Importing ${courseCount} course${courseCount !== 1 ? "s" : ""} with ${cloCount} CLO${cloCount !== 1 ? "s" : ""}`
+      currentIloCount > 0
+        ? `Importing ${courseCount} course${courseCount !== 1 ? "s" : ""} with ${currentIloCount} objective${currentIloCount !== 1 ? "s" : ""}`
         : `Importing ${courseCount} course${courseCount !== 1 ? "s" : ""}`
     )
     handleOpenChange(false)
@@ -208,8 +212,8 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
     rows.map((r) => r.code.trim()).filter(Boolean)
   )
   const uniqueCount = uniqueCourseCodes.size
-  const cloCount = rows.filter(
-    (r) => uniqueCourseCodes.has(r.code.trim()) && r.clo.trim()
+  const currentIloCount = rows.filter(
+    (r) => uniqueCourseCodes.has(r.code.trim()) && r.currentIlo.trim()
   ).length
 
   const cellCls = "border-r p-0 last:border-r-0"
@@ -220,16 +224,22 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex w-[90vw] flex-col gap-3 p-4 sm:max-w-6xl">
         <DialogHeader className="gap-1">
-          <DialogTitle>Bulk import courses</DialogTitle>
-          <DialogDescription className="text-xs">
-            Same course name on multiple rows → one course, multiple CLOs. Paste
-            from Excel: columns map left-to-right —{" "}
-            <span className="font-medium text-foreground">
-              Code · Name · Start · End · Coordinator · CLO
+          <DialogTitle>Manage courses</DialogTitle>
+          <DialogDescription className="space-y-1 text-xs">
+            <span className="block">
+              Paste from a spreadsheet — columns map left-to-right:{" "}
+              <span className="font-medium text-foreground">
+                Code · Name · Start · End · Coordinator · Course objective
+              </span>
+              . Repeat a code on multiple rows to attach several objectives to
+              one course. Start / End format:{" "}
+              <span className="font-medium text-foreground">year-block</span>{" "}
+              (e.g. 2-5). Existing courses are updated; new ones are added.
             </span>
-            . Start / End format:{" "}
-            <span className="font-medium text-foreground">year-block</span>{" "}
-            (e.g. 2-5).
+            <span className="block text-amber-600 dark:text-amber-400">
+              Objectives are matched by text — existing ones are left untouched;
+              only new texts are added.
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -272,7 +282,7 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
                   Coordinator
                 </th>
                 <th className="border-r border-b px-2 py-1.5 text-left font-medium">
-                  CLO description
+                  Course objective
                 </th>
                 <th
                   className="bg-background px-2 py-1.5 text-center font-medium"
@@ -344,8 +354,10 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
                     </td>
                     <td className={cellCls}>
                       <Input
-                        value={row.clo}
-                        onChange={(e) => updateRow(i, "clo", e.target.value)}
+                        value={row.currentIlo}
+                        onChange={(e) =>
+                          updateRow(i, "currentIlo", e.target.value)
+                        }
                         onPaste={(e) => handlePaste(e, i, 5)}
                         placeholder="The student can…"
                         className={inputCls}
@@ -387,7 +399,8 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
           {uniqueCount > 0 && (
             <span className="text-xs text-muted-foreground">
               {uniqueCount} course{uniqueCount !== 1 ? "s" : ""}
-              {cloCount > 0 && `, ${cloCount} CLO${cloCount !== 1 ? "s" : ""}`}
+              {currentIloCount > 0 &&
+                `, ${currentIloCount} objective${currentIloCount !== 1 ? "s" : ""}`}
             </span>
           )}
         </div>
@@ -405,8 +418,8 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
             {uniqueCount > 0
               ? ` ${uniqueCount} course${uniqueCount !== 1 ? "s" : ""}`
               : ""}
-            {cloCount > 0
-              ? ` + ${cloCount} CLO${cloCount !== 1 ? "s" : ""}`
+            {currentIloCount > 0
+              ? ` + ${currentIloCount} objective${currentIloCount !== 1 ? "s" : ""}`
               : ""}
           </Button>
         </DialogFooter>

@@ -1,13 +1,13 @@
-import { useRef } from 'react'
-import { Upload, Download } from 'lucide-react'
-import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { exportClos, parseCsvFile } from '@/lib/csv'
-import { useApp } from '@/context/AppContext'
-import type { Clo } from '@/lib/types'
+import { useRef } from "react"
+import { Upload, Download } from "lucide-react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { exportCurrentIlos, parseCsvFile } from "@/lib/csv"
+import { useApp } from "@/context/AppContext"
+import type { CurrentIlo } from "@/lib/types"
 
 interface Props {
-  clos: Clo[]
+  clos: CurrentIlo[]
   courseId: number
 }
 
@@ -16,7 +16,7 @@ export function CsvActions({ clos, courseId }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleExport() {
-    exportClos(clos, state.courses)
+    exportCurrentIlos(clos, state.courses)
   }
 
   function handleImportClick() {
@@ -34,10 +34,10 @@ export function CsvActions({ clos, courseId }: Props) {
       for (const row of rows) {
         const description = row["description"]?.trim() ?? ""
         if (!description) continue
-        send({ type: "clo:add", courseId, description })
+        send({ type: "current_ilo:add", courseId, description })
         count++
       }
-      toast.success(`Imported ${count} CLO${count !== 1 ? "s" : ""}`)
+      toast.success(`Imported ${count} Current ILO${count !== 1 ? "s" : ""}`)
     } catch (err) {
       toast.error("Failed to import CSV")
       console.error(err)

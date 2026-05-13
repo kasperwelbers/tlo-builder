@@ -94,8 +94,8 @@ export function YamlActions({
             <AlertDialogTitle>Overwrite project data?</AlertDialogTitle>
             <AlertDialogDescription>
               Importing will <strong>permanently replace</strong> all
-              trajectories, courses, TLOs, ILOs, and CLOs in this project with
-              the contents of the file. This cannot be undone.
+              trajectories, courses, TLOs, ILOs, and Current ILOs in this
+              project with the contents of the file. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

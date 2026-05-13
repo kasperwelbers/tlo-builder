@@ -1,23 +1,27 @@
 import { useEffect, useMemo, useState } from "react"
 import { Search, Check } from "lucide-react"
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { OrderBadge } from "@/components/ui/order-badge"
 import { useApp } from "@/context/AppContext"
 import { cn } from "@/lib/utils"
-import type { Clo, Ilo } from "@/lib/types"
+import type { CurrentIlo, Ilo } from "@/lib/types"
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   ilo: Ilo
-  clos: Clo[]
+  currentIlos: CurrentIlo[]
 }
 
-export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
+export function IloLinkDialog({ open, onOpenChange, ilo, currentIlos }: Props) {
   const { state, send } = useApp()
   const [search, setSearch] = useState("")
 
@@ -25,37 +29,62 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
     if (!open) setSearch("")
   }, [open])
 
-  const mappings = state.iloCloMappings.filter(m => m.iloId === ilo.id)
+  const mappings = state.iloCurrentIloMappings.filter((m) => m.iloId === ilo.id)
 
   const groups = useMemo(() => {
     const q = search.toLowerCase()
-    return [...state.courses].sort((a, b) => a.code.localeCompare(b.code)).map((course, i) => {
-        const courseNameMatches = !q || course.code.toLowerCase().includes(q) || course.name.toLowerCase().includes(q)
-        const courseClos = clos.filter(co => co.courseId === course.id)
-        const visibleClos = courseNameMatches
-          ? courseClos
-          : courseClos.filter(co => co.description.toLowerCase().includes(q))
-        const visible = courseNameMatches || visibleClos.length > 0
-        return { course, orderNum: i + 1, visibleClos, visible }
+    return [...state.courses]
+      .sort((a, b) =>
+        a.code.localeCompare(b.code, undefined, { numeric: true })
+      )
+      .map((course, i) => {
+        const courseNameMatches =
+          !q ||
+          course.code.toLowerCase().includes(q) ||
+          course.name.toLowerCase().includes(q)
+        const courseCurrentIlos = currentIlos
+          .filter((co) => co.courseId === course.id)
+          .sort((a, b) =>
+            a.description.localeCompare(b.description, undefined, {
+              numeric: true,
+            })
+          )
+        const visibleCurrentIlos = courseNameMatches
+          ? courseCurrentIlos
+          : courseCurrentIlos.filter((co) =>
+              co.description.toLowerCase().includes(q)
+            )
+        const visible = courseNameMatches || visibleCurrentIlos.length > 0
+        return { course, orderNum: i + 1, visibleCurrentIlos, visible }
       })
-      .filter(g => g.visible)
-  }, [search, state.courses, clos])
+      .filter((g) => g.visible)
+  }, [search, state.courses, currentIlos])
 
   function toggleCourse(courseId: number) {
-    const existing = mappings.find(m => m.courseId === courseId)
-    if (existing && existing.cloId === null) {
-      send({ type: "ilo_clo_mapping:delete", iloId: ilo.id, courseId })
+    const existing = mappings.find((m) => m.courseId === courseId)
+    if (existing && existing.currentIloId === null) {
+      send({ type: "ilo_current_ilo_mapping:delete", iloId: ilo.id, courseId })
     } else {
-      send({ type: "ilo_clo_mapping:add", iloId: ilo.id, courseId, cloId: null })
+      send({
+        type: "ilo_current_ilo_mapping:add",
+        iloId: ilo.id,
+        courseId,
+        currentIloId: null,
+      })
     }
   }
 
-  function toggleClo(courseId: number, cloId: number) {
-    const existing = mappings.find(m => m.courseId === courseId)
-    if (existing && existing.cloId === cloId) {
-      send({ type: "ilo_clo_mapping:delete", iloId: ilo.id, courseId })
+  function toggleCurrentIlo(courseId: number, currentIloId: number) {
+    const existing = mappings.find((m) => m.courseId === courseId)
+    if (existing && existing.currentIloId === currentIloId) {
+      send({ type: "ilo_current_ilo_mapping:delete", iloId: ilo.id, courseId })
     } else {
-      send({ type: "ilo_clo_mapping:add", iloId: ilo.id, courseId, cloId })
+      send({
+        type: "ilo_current_ilo_mapping:add",
+        iloId: ilo.id,
+        courseId,
+        currentIloId,
+      })
     }
   }
 
@@ -64,17 +93,17 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-base">Manage links</DialogTitle>
-          <p className="text-sm text-muted-foreground line-clamp-2 leading-snug">
+          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
             {ilo.description || <span className="italic">No description</span>}
           </p>
         </DialogHeader>
 
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
           <Input
-            placeholder="Search courses or CLOs..."
+            placeholder="Search courses or Current ILOs..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
             autoFocus
           />
@@ -83,7 +112,9 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
         <div className="h-72 overflow-y-auto rounded-md border">
           {state.courses.length === 0 ? (
             <div className="flex h-full items-center justify-center px-4">
-              <p className="text-sm text-muted-foreground text-center">No courses yet. Add one in the sidebar.</p>
+              <p className="text-center text-sm text-muted-foreground">
+                No courses yet. Add one in the sidebar.
+              </p>
             </div>
           ) : groups.length === 0 ? (
             <div className="flex h-full items-center justify-center">
@@ -91,17 +122,20 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
             </div>
           ) : (
             <div>
-              {groups.map(({ course, orderNum, visibleClos }) => {
-                const mapping = mappings.find(m => m.courseId === course.id)
-                const isCourseLevelLinked = mapping != null && mapping.cloId === null
+              {groups.map(({ course, orderNum, visibleCurrentIlos }) => {
+                const mapping = mappings.find((m) => m.courseId === course.id)
+                const isCourseLevelLinked =
+                  mapping != null && mapping.currentIloId === null
 
                 return (
                   <div key={course.id} className="border-b last:border-b-0">
                     {/* Course row */}
                     <div
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors",
-                        isCourseLevelLinked ? "bg-accent/60 hover:bg-accent" : "hover:bg-accent"
+                        "flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors",
+                        isCourseLevelLinked
+                          ? "bg-accent/60 hover:bg-accent"
+                          : "hover:bg-accent"
                       )}
                       onClick={() => toggleCourse(course.id)}
                     >
@@ -111,32 +145,49 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
                           isCourseLevelLinked ? "opacity-100" : "opacity-0"
                         )}
                       />
-                      <OrderBadge num={orderNum} color={course.color} shape="square" />
-                      <span className="flex-1 text-sm font-medium">{course.code}</span>
-                      {course.name && <span className="text-xs text-muted-foreground mr-1 truncate max-w-32">{course.name}</span>}
-                      <span className="text-xs text-muted-foreground shrink-0">course level</span>
+                      <OrderBadge
+                        label={String(orderNum)}
+                        color={course.color}
+                        shape="square"
+                      />
+                      <span className="flex-1 text-sm font-medium">
+                        {course.code}
+                      </span>
+                      {course.name && (
+                        <span className="mr-1 max-w-32 truncate text-xs text-muted-foreground">
+                          {course.name}
+                        </span>
+                      )}
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        course level
+                      </span>
                     </div>
 
-                    {/* CLO rows -- indented */}
-                    {visibleClos.map(clo => {
-                      const isCloLinked = mapping?.cloId === clo.id
+                    {/* Current ILO rows -- indented */}
+                    {visibleCurrentIlos.map((currentIlo) => {
+                      const isCurrentIloLinked =
+                        mapping?.currentIloId === currentIlo.id
                       return (
                         <div
-                          key={clo.id}
+                          key={currentIlo.id}
                           className={cn(
-                            "flex items-start gap-2 pl-8 pr-3 py-1.5 cursor-pointer border-t border-border/40 transition-colors",
-                            isCloLinked ? "bg-accent/60 hover:bg-accent" : "hover:bg-accent"
+                            "flex cursor-pointer items-start gap-2 border-t border-border/40 py-1.5 pr-3 pl-8 transition-colors",
+                            isCurrentIloLinked
+                              ? "bg-accent/60 hover:bg-accent"
+                              : "hover:bg-accent"
                           )}
-                          onClick={() => toggleClo(course.id, clo.id)}
+                          onClick={() =>
+                            toggleCurrentIlo(course.id, currentIlo.id)
+                          }
                         >
                           <Check
                             className={cn(
-                              "size-3.5 shrink-0 mt-0.5 transition-opacity",
-                              isCloLinked ? "opacity-100" : "opacity-0"
+                              "mt-0.5 size-3.5 shrink-0 transition-opacity",
+                              isCurrentIloLinked ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <p className="flex-1 min-w-0 text-sm text-foreground/80 line-clamp-2 leading-snug">
-                            {clo.description || "No description"}
+                          <p className="line-clamp-2 min-w-0 flex-1 text-sm leading-snug text-foreground/80">
+                            {currentIlo.description || "No description"}
                           </p>
                         </div>
                       )
@@ -149,7 +200,9 @@ export function IloLinkDialog({ open, onOpenChange, ilo, clos }: Props) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Done</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Done
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

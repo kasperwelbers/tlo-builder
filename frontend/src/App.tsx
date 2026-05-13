@@ -6,7 +6,7 @@ import { NavProvider } from "@/context/NavigationContext"
 import { AppShell } from "@/components/layout/AppShell"
 import type { Page } from "@/components/layout/AppShell"
 import { TrajectoryPage } from "@/components/tlos/TloPage"
-import { CloPage } from "@/components/clos/CloPage"
+import { IloPage } from "@/components/ilos/IloPage"
 import { OverviewPage } from "@/components/overview/OverviewPage"
 import { LandingPage } from "@/components/LandingPage"
 import { LoginPage } from "@/components/auth/LoginPage"
@@ -23,8 +23,8 @@ function getProjectIdFromUrl(): string | null {
 }
 
 function navigateTo(path: string) {
-  window.history.pushState({}, '', path)
-  window.dispatchEvent(new PopStateEvent('popstate'))
+  window.history.pushState({}, "", path)
+  window.dispatchEvent(new PopStateEvent("popstate"))
 }
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
   const [page, setPage] = useState<Page | null>(null)
 
   useEffect(() => {
-    setPage(prev => {
+    setPage((prev) => {
       if (prev === null) {
         if (state.trajectories.length > 0) {
           return { type: "trajectory", id: state.trajectories[0].id }
@@ -51,7 +51,7 @@ function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
         return prev
       }
       if (prev.type === "trajectory") {
-        const exists = state.trajectories.some(t => t.id === prev.id)
+        const exists = state.trajectories.some((t) => t.id === prev.id)
         if (!exists) {
           return state.trajectories.length > 0
             ? { type: "trajectory", id: state.trajectories[0].id }
@@ -59,7 +59,7 @@ function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
         }
       }
       if (prev.type === "course") {
-        const exists = state.courses.some(c => c.id === prev.id)
+        const exists = state.courses.some((c) => c.id === prev.id)
         if (!exists) {
           return state.trajectories.length > 0
             ? { type: "trajectory", id: state.trajectories[0].id }
@@ -90,12 +90,16 @@ function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
         onGoHome={onGoHome}
         onRename={onRename}
       >
-        {page?.type === "trajectory" && <TrajectoryPage trajectoryId={page.id} />}
-        {page?.type === "course" && <CloPage courseId={page.id} />}
+        {page?.type === "trajectory" && (
+          <TrajectoryPage trajectoryId={page.id} />
+        )}
+        {page?.type === "course" && <IloPage courseId={page.id} />}
         {page?.type === "overview" && <OverviewPage />}
         {page === null && (
           <div className="flex h-full items-center justify-center text-muted-foreground">
-            <p>Select a trajectory or course from the sidebar to get started.</p>
+            <p>
+              Select a trajectory or course from the sidebar to get started.
+            </p>
           </div>
         )}
       </AppShell>
@@ -103,14 +107,20 @@ function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
   )
 }
 
-function ProjectApp({ projectId, email }: { projectId: string; email: string }) {
-  const [projectName, setProjectName] = useState('')
+function ProjectApp({
+  projectId,
+  email,
+}: {
+  projectId: string
+  email: string
+}) {
+  const [projectName, setProjectName] = useState("")
 
   useEffect(() => {
-    fetch('/api/projects')
-      .then(r => r.json() as Promise<{ id: string; name: string }[]>)
-      .then(list => {
-        const found = list.find(p => p.id === projectId)
+    fetch("/api/projects")
+      .then((r) => r.json() as Promise<{ id: string; name: string }[]>)
+      .then((list) => {
+        const found = list.find((p) => p.id === projectId)
         if (found) setProjectName(found.name)
       })
       .catch(() => {})
@@ -122,7 +132,7 @@ function ProjectApp({ projectId, email }: { projectId: string; email: string }) 
         <Inner
           projectId={projectId}
           projectName={projectName}
-          onGoHome={() => navigateTo('/')}
+          onGoHome={() => navigateTo("/")}
           onRename={setProjectName}
         />
         <Toaster richColors position="bottom-right" />
@@ -140,12 +150,14 @@ function AuthenticatedApp() {
   const [projectId, setProjectId] = useState<string | null>(getProjectIdFromUrl)
 
   useEffect(() => {
-    function onPopState() { setProjectId(getProjectIdFromUrl()) }
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
+    function onPopState() {
+      setProjectId(getProjectIdFromUrl())
+    }
+    window.addEventListener("popstate", onPopState)
+    return () => window.removeEventListener("popstate", onPopState)
   }, [])
 
-  if (auth.status === 'loading') {
+  if (auth.status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-sm text-muted-foreground">Loading…</div>
@@ -153,7 +165,7 @@ function AuthenticatedApp() {
     )
   }
 
-  if (auth.status === 'unauthenticated') {
+  if (auth.status === "unauthenticated") {
     return (
       <>
         <LoginPage />
@@ -168,7 +180,7 @@ function AuthenticatedApp() {
     return (
       <>
         <UserMenu email={user.email} />
-        <LandingPage onOpen={id => navigateTo('/project/' + id)} />
+        <LandingPage onOpen={(id) => navigateTo("/project/" + id)} />
         <Toaster richColors position="bottom-right" />
       </>
     )

@@ -4,9 +4,11 @@ import {
   courses,
   tlos,
   ilos,
-  clos,
+  currentIlos,
   tloIloMappings,
-  iloCloMappings,
+  iloCurrentIloMappings,
+  comments,
+  users,
 } from "../db/schema"
 import { and, eq, inArray } from "drizzle-orm"
 
@@ -15,8 +17,9 @@ export type SyncTable =
   | "courses"
   | "tlos"
   | "ilos"
-  | "clos"
-  | "ilo_clo_mappings"
+  | "current_ilos"
+  | "ilo_current_ilo_mappings"
+  | "comments"
 
 // -- Trajectories --------------------------------------------------------------
 
@@ -131,7 +134,9 @@ async function updateIlo(db: DB, data: any) {
 
 async function deleteIlo(db: DB, data: any) {
   await db.delete(tloIloMappings).where(eq(tloIloMappings.iloId, data.id))
-  await db.delete(iloCloMappings).where(eq(iloCloMappings.iloId, data.id))
+  await db
+    .delete(iloCurrentIloMappings)
+    .where(eq(iloCurrentIloMappings.iloId, data.id))
   await db.delete(ilos).where(eq(ilos.id, data.id))
 }
 
@@ -179,34 +184,37 @@ async function renameCourse(db: DB, data: any) {
 
 async function deleteCourse(db: DB, data: any) {
   await db
-    .delete(iloCloMappings)
+    .delete(iloCurrentIloMappings)
     .where(
       and(
-        eq(iloCloMappings.projectId, data.projectId),
-        eq(iloCloMappings.courseId, data.courseId)
+        eq(iloCurrentIloMappings.projectId, data.projectId),
+        eq(iloCurrentIloMappings.courseId, data.courseId)
       )
     )
-  const cloRows = await db
-    .select({ id: clos.id })
-    .from(clos)
+  const currentIloRows = await db
+    .select({ id: currentIlos.id })
+    .from(currentIlos)
     .where(
-      and(eq(clos.projectId, data.projectId), eq(clos.courseId, data.courseId))
+      and(
+        eq(currentIlos.projectId, data.projectId),
+        eq(currentIlos.courseId, data.courseId)
+      )
     )
-  if (cloRows.length) {
-    await db.delete(clos).where(
+  if (currentIloRows.length) {
+    await db.delete(currentIlos).where(
       inArray(
-        clos.id,
-        cloRows.map((r) => r.id)
+        currentIlos.id,
+        currentIloRows.map((r) => r.id)
       )
     )
   }
   await db.delete(courses).where(eq(courses.id, data.courseId))
 }
 
-// -- CLOs (Course Learning Objectives) ----------------------------------------
+// -- Current ILOs (Course Learning Objectives) ----------------------------------------
 
-async function addClo(db: DB, data: any) {
-  await db.insert(clos).values({
+async function addCurrentIlo(db: DB, data: any) {
+  await db.insert(currentIlos).values({
     projectId: data.projectId,
     courseId: data.courseId,
     description: data.description ?? "",
@@ -214,23 +222,23 @@ async function addClo(db: DB, data: any) {
   })
 }
 
-async function updateClo(db: DB, data: any) {
+async function updateCurrentIlo(db: DB, data: any) {
   await db
-    .update(clos)
+    .update(currentIlos)
     .set({
-      courseId: data.courseId,
-      description: data.description,
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.courseId !== undefined && { courseId: data.courseId }),
       bloomLevel: data.bloomLevel ?? null,
     })
-    .where(eq(clos.id, data.id))
+    .where(eq(currentIlos.id, data.id))
 }
 
-async function deleteClo(db: DB, data: any) {
+async function deleteCurrentIlo(db: DB, data: any) {
   await db
-    .update(iloCloMappings)
-    .set({ cloId: null })
-    .where(eq(iloCloMappings.cloId, data.id))
-  await db.delete(clos).where(eq(clos.id, data.id))
+    .update(iloCurrentIloMappings)
+    .set({ currentIloId: null })
+    .where(eq(iloCurrentIloMappings.currentIloId, data.id))
+  await db.delete(currentIlos).where(eq(currentIlos.id, data.id))
 }
 
 // -- Mappings -----------------------------------------------------------------
@@ -253,37 +261,98 @@ async function deleteTloIloMapping(db: DB, data: any) {
     )
 }
 
-async function addIloCloMapping(db: DB, data: any) {
+async function addIloCurrentIloMapping(db: DB, data: any) {
   let courseId = data.courseId
-  if (!courseId && data.cloId) {
+  if (!courseId && data.currentIloId) {
     const [row] = await db
-      .select({ courseId: clos.courseId })
-      .from(clos)
-      .where(eq(clos.id, data.cloId))
+      .select({ courseId: currentIlos.courseId })
+      .from(currentIlos)
+      .where(eq(currentIlos.id, data.currentIloId))
     courseId = row?.courseId
   }
   if (!courseId) return
   await db
-    .insert(iloCloMappings)
+    .insert(iloCurrentIloMappings)
     .values({
       iloId: data.iloId,
       courseId,
-      cloId: data.cloId ?? null,
+      currentIloId: data.currentIloId ?? null,
       projectId: data.projectId,
     })
     .onConflictDoUpdate({
-      target: [iloCloMappings.iloId, iloCloMappings.courseId],
-      set: { cloId: data.cloId ?? null },
+      target: [iloCurrentIloMappings.iloId, iloCurrentIloMappings.courseId],
+      set: { currentIloId: data.currentIloId ?? null },
     })
 }
 
-async function deleteIloCloMapping(db: DB, data: any) {
+async function deleteIloCurrentIloMapping(db: DB, data: any) {
   await db
-    .delete(iloCloMappings)
+    .delete(iloCurrentIloMappings)
     .where(
       and(
-        eq(iloCloMappings.iloId, data.iloId),
-        eq(iloCloMappings.courseId, data.courseId)
+        eq(iloCurrentIloMappings.iloId, data.iloId),
+        eq(iloCurrentIloMappings.courseId, data.courseId)
+      )
+    )
+}
+
+// -- Comments ----------------------------------------------------------------
+
+async function createComment(db: DB, data: any): Promise<void> {
+  // Look up the user's email from their userId
+  const [userRow] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, data.userId))
+  const userEmail = userRow?.email ?? "unknown"
+
+  await db.insert(comments).values({
+    projectId: data.projectId,
+    userEmail,
+    context: data.context, // 'trajectory' | 'course'
+    contextId: data.contextId, // the trajectory or course id
+    comment: data.comment ?? "",
+    deleted: false,
+    createdAt: Date.now(),
+    updatedAt: null,
+  })
+}
+
+async function updateComment(db: DB, data: any): Promise<void> {
+  // Only the comment's author may edit
+  const [userRow] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, data.userId))
+  const userEmail = userRow?.email ?? ""
+
+  await db
+    .update(comments)
+    .set({ comment: data.comment, updatedAt: Date.now() })
+    .where(
+      and(
+        eq(comments.id, data.id),
+        eq(comments.userEmail, userEmail),
+        eq(comments.projectId, data.projectId)
+      )
+    )
+}
+
+async function deleteComment(db: DB, data: any): Promise<void> {
+  // Hard delete — only the comment's author may delete
+  const [userRow] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, data.userId))
+  const userEmail = userRow?.email ?? ""
+
+  await db
+    .delete(comments)
+    .where(
+      and(
+        eq(comments.id, data.id),
+        eq(comments.userEmail, userEmail),
+        eq(comments.projectId, data.projectId)
       )
     )
 }
@@ -325,7 +394,7 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
       return ["ilos"]
     case "ilo:delete":
       await deleteIlo(db, data)
-      return ["ilos", "ilo_clo_mappings"]
+      return ["ilos", "ilo_current_ilo_mappings"]
 
     case "course:create":
       await createCourse(db, data)
@@ -338,17 +407,17 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
       return ["courses"]
     case "course:delete":
       await deleteCourse(db, data)
-      return ["courses", "clos", "ilo_clo_mappings"]
+      return ["courses", "current_ilos", "ilo_current_ilo_mappings"]
 
-    case "clo:add":
-      await addClo(db, data)
-      return ["clos"]
-    case "clo:update":
-      await updateClo(db, data)
-      return ["clos"]
-    case "clo:delete":
-      await deleteClo(db, data)
-      return ["clos", "ilo_clo_mappings"]
+    case "current_ilo:add":
+      await addCurrentIlo(db, data)
+      return ["current_ilos"]
+    case "current_ilo:update":
+      await updateCurrentIlo(db, data)
+      return ["current_ilos"]
+    case "current_ilo:delete":
+      await deleteCurrentIlo(db, data)
+      return ["current_ilos", "ilo_current_ilo_mappings"]
 
     case "tlo_ilo_mapping:add":
       await addTloIloMapping(db, data)
@@ -357,18 +426,28 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
       await deleteTloIloMapping(db, data)
       return ["ilos"]
 
-    case "ilo_clo_mapping:add":
-      await addIloCloMapping(db, data)
-      return ["ilo_clo_mappings"]
-    case "ilo_clo_mapping:delete":
-      await deleteIloCloMapping(db, data)
-      return ["ilo_clo_mappings"]
+    case "ilo_current_ilo_mapping:add":
+      await addIloCurrentIloMapping(db, data)
+      return ["ilo_current_ilo_mappings"]
+    case "ilo_current_ilo_mapping:delete":
+      await deleteIloCurrentIloMapping(db, data)
+      return ["ilo_current_ilo_mappings"]
 
     case "course:bulk_create":
       return bulkCreateCourses(db, data)
 
     case "import:all":
       return importAll(db, data)
+
+    case "comment:create":
+      await createComment(db, data)
+      return ["comments"]
+    case "comment:update":
+      await updateComment(db, data)
+      return ["comments"]
+    case "comment:delete":
+      await deleteComment(db, data)
+      return ["comments"]
 
     default:
       console.warn("Unknown message type:", data.type)
@@ -395,36 +474,36 @@ export async function addIloWithLinks(db: DB, data: any): Promise<SyncTable[]> {
 
   const tables: SyncTable[] = ["ilos"]
 
-  if (data.cloId) {
-    // Link to a specific CLO (courseId is resolved from the CLO row)
-    const [cloRow] = await db
-      .select({ courseId: clos.courseId })
-      .from(clos)
-      .where(eq(clos.id, data.cloId))
-    if (cloRow) {
+  if (data.currentIloId) {
+    // Link to a specific current ILO (courseId is resolved from the current ILO row)
+    const [currentIloRow] = await db
+      .select({ courseId: currentIlos.courseId })
+      .from(currentIlos)
+      .where(eq(currentIlos.id, data.currentIloId))
+    if (currentIloRow) {
       await db
-        .insert(iloCloMappings)
+        .insert(iloCurrentIloMappings)
         .values({
           iloId: newIlo.id,
-          courseId: cloRow.courseId,
-          cloId: data.cloId,
+          courseId: currentIloRow.courseId,
+          currentIloId: data.currentIloId,
           projectId: data.projectId,
         })
         .onConflictDoNothing()
-      tables.push("ilo_clo_mappings")
+      tables.push("ilo_current_ilo_mappings")
     }
   } else if (data.courseId) {
-    // Link at course level only (no specific CLO)
+    // Link at course level only (no specific current ILO)
     await db
-      .insert(iloCloMappings)
+      .insert(iloCurrentIloMappings)
       .values({
         iloId: newIlo.id,
         courseId: data.courseId,
-        cloId: null,
+        currentIloId: null,
         projectId: data.projectId,
       })
       .onConflictDoNothing()
-    tables.push("ilo_clo_mappings")
+    tables.push("ilo_current_ilo_mappings")
   }
 
   return tables
@@ -434,21 +513,24 @@ export async function addIloWithLinks(db: DB, data: any): Promise<SyncTable[]> {
 
 async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
   const projectId = data.projectId
-  const courseList = data.courses as Array<{
-    code: string
-    name?: string
-    color?: string
-    coordinator?: string | null
-    start?: string | null
-    end?: string | null
-    clos?: string[]
-  }>
+  const courseList = (
+    data.courses as Array<{
+      code: string
+      name?: string
+      color?: string
+      coordinator?: string | null
+      start?: string | null
+      end?: string | null
+      current_ilos?: string[]
+      clos?: string[]
+    }>
+  ).filter((c) => (c.code ?? "").trim() !== "")
 
+  // Upsert each incoming course and add any new objectives
   for (const courseData of courseList) {
-    const code = (courseData.code ?? "").trim()
-    if (!code) continue
+    const code = courseData.code.trim()
 
-    // Create if not exists (unique by project + code)
+    // Upsert — preserves the row ID for existing courses
     await db
       .insert(courses)
       .values({
@@ -460,9 +542,18 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
         start: courseData.start ?? null,
         end: courseData.end ?? null,
       })
-      .onConflictDoNothing()
+      .onConflictDoUpdate({
+        target: [courses.projectId, courses.code],
+        set: {
+          name: courseData.name ?? "",
+          color: courseData.color ?? "",
+          coordinator: courseData.coordinator ?? null,
+          start: courseData.start ?? null,
+          end: courseData.end ?? null,
+        },
+      })
 
-    // Resolve the course ID (whether freshly created or already existing)
+    // Resolve the course ID after upsert
     const [courseRow] = await db
       .select({ id: courses.id })
       .from(courses)
@@ -470,19 +561,32 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
 
     if (!courseRow) continue
 
-    for (const cloDesc of courseData.clos ?? []) {
-      const desc = (cloDesc ?? "").trim()
-      if (!desc) continue
-      await db.insert(clos).values({
-        projectId,
-        courseId: courseRow.id,
-        description: desc,
-        bloomLevel: null,
-      })
+    const courseId = courseRow.id
+
+    // Fetch existing objective texts for this course
+    const existingIlos = await db
+      .select({ description: currentIlos.description })
+      .from(currentIlos)
+      .where(eq(currentIlos.courseId, courseId))
+    const existingTexts = new Set(existingIlos.map((r) => r.description))
+
+    // Only insert objectives whose text isn't already present — never delete
+    const incomingTexts = (courseData.current_ilos ?? courseData.clos ?? [])
+      .map((t) => (t ?? "").trim())
+      .filter((t) => t !== "")
+    for (const text of incomingTexts) {
+      if (!existingTexts.has(text)) {
+        await db.insert(currentIlos).values({
+          projectId,
+          courseId,
+          description: text,
+          bloomLevel: null,
+        })
+      }
     }
   }
 
-  return ["courses", "clos"]
+  return ["courses", "current_ilos"]
 }
 
 async function importAll(db: DB, data: any): Promise<SyncTable[]> {
@@ -490,9 +594,11 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
   const payload = data.data as any
 
   // Full overwrite: delete all existing content for this project in dependency order
-  await db.delete(iloCloMappings).where(eq(iloCloMappings.projectId, projectId))
+  await db
+    .delete(iloCurrentIloMappings)
+    .where(eq(iloCurrentIloMappings.projectId, projectId))
   await db.delete(tloIloMappings).where(eq(tloIloMappings.projectId, projectId))
-  await db.delete(clos).where(eq(clos.projectId, projectId))
+  await db.delete(currentIlos).where(eq(currentIlos.projectId, projectId))
   await db.delete(ilos).where(eq(ilos.projectId, projectId))
   await db.delete(tlos).where(eq(tlos.projectId, projectId))
   await db.delete(trajectories).where(eq(trajectories.projectId, projectId))
@@ -572,24 +678,24 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     )
   }
 
-  // 2. Also create any courses referenced only in course_objectives (code-only fallback)
+  // 2. Also create any courses referenced only in current_ilos / course_objectives (code-only fallback)
+  const courseObjectives =
+    payload.current_ilos ?? payload.course_objectives ?? []
   const uniqueCourseCodes = [
-    ...new Set<string>(
-      (payload.course_objectives ?? []).map((c: any) => c.course as string)
-    ),
+    ...new Set<string>(courseObjectives.map((c: any) => c.course as string)),
   ]
   for (const code of uniqueCourseCodes) {
     if (!courseCodeToId.has(code))
       courseCodeToId.set(code, await upsertCourse(code))
   }
 
-  // Key CLOs by course+description since there is no name field
+  // Key current ILOs by course+description since there is no name field
   const coMap = new Map<string, number>()
-  for (const co of payload.course_objectives ?? []) {
+  for (const co of courseObjectives) {
     const courseId = courseCodeToId.get(co.course)
     if (courseId === undefined) continue
     const [inserted] = await db
-      .insert(clos)
+      .insert(currentIlos)
       .values({
         projectId,
         courseId,
@@ -630,18 +736,29 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
         await db
           .insert(tloIloMappings)
           .values({ tloId: newTlo.id, iloId: newIlo.id, projectId })
-        for (const coRef of iloData.course_objectives ?? []) {
-          const cloId = coMap.get(`${coRef.course}::${coRef.description}`)
+        for (const coRef of iloData.current_ilos ??
+          iloData.course_objectives ??
+          []) {
+          const currentIloId = coMap.get(
+            `${coRef.course}::${coRef.description}`
+          )
           const courseId = courseCodeToId.get(coRef.course)
-          if (cloId !== undefined && courseId !== undefined)
+          if (currentIloId !== undefined && courseId !== undefined)
             await db
-              .insert(iloCloMappings)
-              .values({ iloId: newIlo.id, courseId, cloId, projectId })
+              .insert(iloCurrentIloMappings)
+              .values({ iloId: newIlo.id, courseId, currentIloId, projectId })
               .onConflictDoNothing()
         }
       }
     }
   }
 
-  return ["trajectories", "courses", "tlos", "ilos", "clos", "ilo_clo_mappings"]
+  return [
+    "trajectories",
+    "courses",
+    "tlos",
+    "ilos",
+    "current_ilos",
+    "ilo_current_ilo_mappings",
+  ]
 }

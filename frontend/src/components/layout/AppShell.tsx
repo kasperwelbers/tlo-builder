@@ -75,13 +75,33 @@ export function AppShell({
   }
 
   const trajectories = useMemo(
-    () => [...state.trajectories].sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      [...state.trajectories].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true })
+      ),
     [state.trajectories]
   )
   const courses = useMemo(
-    () => [...state.courses].sort((a, b) => a.code.localeCompare(b.code)),
+    () =>
+      [...state.courses].sort((a, b) =>
+        a.code.localeCompare(b.code, undefined, { numeric: true })
+      ),
     [state.courses]
   )
+
+  const [courseSearch, setCourseSearch] = useState("")
+  const courseIndexMap = useMemo(
+    () => new Map(courses.map((c, i) => [c.id, i])),
+    [courses]
+  )
+  const filteredCourses = useMemo(() => {
+    const q = courseSearch.trim().toLowerCase()
+    if (!q) return courses
+    return courses.filter(
+      (c) =>
+        c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+    )
+  }, [courses, courseSearch])
 
   function handleNavigate(page: Page) {
     onNavigate(page)
@@ -334,7 +354,11 @@ export function AppShell({
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )
                   const badge = (
-                    <OrderBadge num={i + 1} color={t.color} shape="circle" />
+                    <OrderBadge
+                      label={String.fromCharCode(65 + i)}
+                      color={t.color}
+                      shape="circle"
+                    />
                   )
                   if (collapsed) {
                     return (
@@ -377,8 +401,7 @@ export function AppShell({
 
             {/* Courses */}
             <div className={cn("pb-4", collapsed ? "px-1.5" : "px-3")}>
-              {collapsed ? // </div> //   C // <div className="text-center font-semibold text-muted-foreground">
-              null : (
+              {collapsed ? null : ( // </div> //   C // <div className="text-center font-semibold text-muted-foreground">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                     Courses
@@ -405,13 +428,21 @@ export function AppShell({
                   </div>
                 </div>
               )}
+              {!collapsed && (
+                <input
+                  value={courseSearch}
+                  onChange={(e) => setCourseSearch(e.target.value)}
+                  placeholder="Search courses…"
+                  className="mb-1 h-6 w-full rounded border px-2 text-xs placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-none"
+                />
+              )}
               <div className="space-y-0.5">
-                {!collapsed && courses.length === 0 && (
+                {!collapsed && filteredCourses.length === 0 && (
                   <p className="px-2 py-1 text-xs text-muted-foreground italic">
-                    No courses yet
+                    {courseSearch.trim() ? "No matches" : "No courses yet"}
                   </p>
                 )}
-                {courses.map((c, i) => {
+                {filteredCourses.map((c) => {
                   const isActive =
                     currentPage?.type === "course" && currentPage.id === c.id
                   const btnClass = cn(
@@ -424,7 +455,11 @@ export function AppShell({
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )
                   const badge = (
-                    <OrderBadge num={i + 1} color={c.color} shape="square" />
+                    <OrderBadge
+                      label={String((courseIndexMap.get(c.id) ?? 0) + 1)}
+                      color={c.color}
+                      shape="square"
+                    />
                   )
                   if (collapsed) {
                     return (

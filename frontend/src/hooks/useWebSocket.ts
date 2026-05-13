@@ -5,16 +5,17 @@ const INITIAL_STATE: AppState = {
   trajectories: [],
   tlos: [],
   ilos: [],
-  clos: [],
-  iloCloMappings: [],
+  currentIlos: [],
+  iloCurrentIloMappings: [],
   courses: [],
+  comments: [],
 }
 
 async function fetchTicket(projectId: string): Promise<string | null> {
   try {
-    const res = await fetch('/api/ws-ticket', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/api/ws-ticket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ projectId }),
     })
     if (res.status === 401) {
@@ -22,7 +23,7 @@ async function fetchTicket(projectId: string): Promise<string | null> {
       return null
     }
     if (!res.ok) return null
-    const { ticket } = await res.json() as { ticket: string }
+    const { ticket } = (await res.json()) as { ticket: string }
     return ticket
   } catch {
     return null
@@ -56,7 +57,9 @@ export function useWebSocket(projectId: string) {
       if (!ticket || !mountedRef.current) return
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws/${projectId}?ticket=${ticket}`)
+      const ws = new WebSocket(
+        `${protocol}//${window.location.host}/ws/${projectId}?ticket=${ticket}`
+      )
       wsRef.current = ws
 
       ws.onopen = () => {
@@ -78,33 +81,50 @@ export function useWebSocket(projectId: string) {
                 trajectories: d.trajectories ?? [],
                 tlos: d.tlos ?? [],
                 ilos: d.ilos ?? [],
-                clos: d.clos ?? [],
-                iloCloMappings: d.iloCloMappings ?? [],
+                currentIlos: d.currentIlos ?? [],
+                iloCurrentIloMappings: d.iloCurrentIloMappings ?? [],
                 courses: d.courses ?? [],
+                comments: d.comments ?? [],
               })
               setReady(true)
               break
             }
             case "sync:trajectories":
-              setState(s => ({ ...s, trajectories: msg.data as AppState["trajectories"] }))
+              setState((s) => ({
+                ...s,
+                trajectories: msg.data as AppState["trajectories"],
+              }))
               break
             case "sync:tlos":
-              setState(s => ({ ...s, tlos: msg.data as AppState["tlos"] }))
+              setState((s) => ({ ...s, tlos: msg.data as AppState["tlos"] }))
               break
             case "sync:ilos":
-              setState(s => ({ ...s, ilos: msg.data as AppState["ilos"] }))
+              setState((s) => ({ ...s, ilos: msg.data as AppState["ilos"] }))
               break
-            case "sync:clos":
-              setState(s => ({ ...s, clos: msg.data as AppState["clos"] }))
-              break
-            case "sync:ilo_clo_mappings":
-              setState(s => ({
+            case "sync:current_ilos":
+              setState((s) => ({
                 ...s,
-                iloCloMappings: msg.data as AppState["iloCloMappings"],
+                currentIlos: msg.data as AppState["currentIlos"],
+              }))
+              break
+            case "sync:ilo_current_ilo_mappings":
+              setState((s) => ({
+                ...s,
+                iloCurrentIloMappings:
+                  msg.data as AppState["iloCurrentIloMappings"],
               }))
               break
             case "sync:courses":
-              setState(s => ({ ...s, courses: msg.data as AppState["courses"] }))
+              setState((s) => ({
+                ...s,
+                courses: msg.data as AppState["courses"],
+              }))
+              break
+            case "sync:comments":
+              setState((s) => ({
+                ...s,
+                comments: msg.data as AppState["comments"],
+              }))
               break
             case "sync:error":
               console.error("Server error:", msg.message)

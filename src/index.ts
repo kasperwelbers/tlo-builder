@@ -378,7 +378,15 @@ app.get("/ws/:projectId", async (c) => {
   const projectId = c.req.param("projectId")
   const id = c.env.PROJECT_ROOM.idFromName(projectId)
   const room = c.env.PROJECT_ROOM.get(id)
-  return room.fetch(c.req.raw)
+
+  // Forward the verified user id to the Durable Object via a header
+  const forwarded = new Request(c.req.raw, {
+    headers: new Headers({
+      ...Object.fromEntries(c.req.raw.headers.entries()),
+      "X-User-Id": row.user_id,
+    }),
+  })
+  return room.fetch(forwarded)
 })
 
 // ---------------------------------------------------------------------------

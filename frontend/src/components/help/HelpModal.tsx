@@ -43,7 +43,7 @@ const NAV_ITEMS: { id: HelpPage; label: string; icon: React.ReactNode }[] = [
   },
   {
     id: "concepts",
-    label: "TLOs, ILOs & CLOs",
+    label: "TLOs & ILOs",
     icon: <Layers className="size-3.5 shrink-0" />,
   },
   {
@@ -198,14 +198,14 @@ function TloSectionMockup() {
   )
 }
 
-function CloSectionMockup() {
+function CourseSectionMockup() {
   return (
     <div className="pointer-events-none my-4 space-y-3 text-sm select-none">
-      {/* "ILOs without CLOs" bucket */}
+      {/* Unlinked ILOs bucket */}
       <div>
         <p className="mb-1 px-1 text-xs font-semibold tracking-wide text-muted-foreground">
           <Ann n={1} floating />
-          ILOs without CLOs
+          ILOs without current course objective
         </p>
         <div className="rounded-lg border border-dashed p-2">
           <div className="flex items-center gap-3 rounded-md px-3 py-1.5">
@@ -230,7 +230,7 @@ function CloSectionMockup() {
         </div>
       </div>
 
-      {/* CLO section */}
+      {/* Course objective section */}
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="flex items-center gap-2 bg-muted/40 px-4 py-2">
           <div className="flex w-full items-center gap-3 text-xs">
@@ -240,7 +240,7 @@ function CloSectionMockup() {
           </div>
           <span
             className={cn(
-              "inline-flex h-6 items-center justify-center rounded border px-2 text-xs font-semibold",
+              "inline-flex h-6 items-center justify-center rounded border px-2 text-xs font-semibold opacity-50",
               bloomBadgeClass("C3")
             )}
           >
@@ -248,30 +248,26 @@ function CloSectionMockup() {
             C3
           </span>
         </div>
-
-        <div className="bg-muted/40 px-1 pb-2 pl-4 text-xs text-black/60 italic"></div>
         <div className="border-t" />
         <div className="py-1">
           <div className="flex items-center gap-3 rounded-md px-3 py-1.5">
+            <Ann n={4} floating />
             <span
               className={cn(
                 "inline-flex h-6 items-center justify-center rounded border px-2 text-xs font-semibold",
                 bloomBadgeClass("C3")
               )}
             >
-              <Ann n={4} floating />
               C3
             </span>
             <span className="flex-1 text-xs font-medium">
-              <Ann n={5} floating />
               Conduct and analyse a semi-structured interview
             </span>
-            {/* Trajectory badge — colored circle */}
             <span
               className="inline-flex size-5 items-center justify-center rounded-full text-xs font-bold text-white"
               style={{ background: "#10b981" }}
             >
-              <Ann n={6} floating />1
+              1
             </span>
           </div>
         </div>
@@ -285,24 +281,24 @@ function TrajectoriesHelpPage() {
     <div>
       <h1 className="mb-1 text-xl font-bold">Trajectory Page</h1>
       <p className="mb-5 text-sm text-muted-foreground">
-        Define high-level curriculum outcomes and trace them to specific,
-        assessable activities in courses.
+        Define high-level curriculum outcomes and break them down into specific,
+        assessable learning outcomes linked to courses.
       </p>
 
       <Section title="What is a trajectory?">
         <P>
-          A <strong>trajectory</strong> represents a learning path — a degree
-          program, specialization, or study theme. On this page you define{" "}
-          <strong>Trajectory Learning Outcomes (TLOs)</strong>: the broad,
-          program-spanning competencies that graduates should possess.
+          A <strong>trajectory</strong> represents a cross-cutting learning
+          theme — a degree program, specialization, or competency area. On this
+          page you define <strong>Trajectory Learning Outcomes (TLOs)</strong>:
+          broad, program-spanning statements of what graduates should be able to
+          do.
         </P>
         <P>
-          TLOs are intentionally high-level and are not directly assessable on
-          their own. To show <em>how</em> the trajectory achieves each TLO,
-          every TLO must be broken down into{" "}
+          TLOs are intentionally high-level. To show concretely how the
+          trajectory is achieved, each TLO is broken down into{" "}
           <strong>Intended Learning Outcomes (ILOs)</strong> — specific,
-          assessable outcome statements — and each ILO must be linked to at
-          least one course where it is taught and assessed.
+          assessable outcome statements, each linked to a course where it is
+          taught and assessed.
         </P>
       </Section>
 
@@ -315,44 +311,43 @@ function TrajectoriesHelpPage() {
           </li>
           <li>
             <Ann n={2} /> <strong>TLO Bloom level</strong> — The highest
-            cognitive depth required to achieve this TLO overall.
+            cognitive depth required across all ILOs in this TLO.
           </li>
           <li>
-            <Ann n={3} /> <strong>TLO description</strong> — Write as{" "}
-            <em>"The student can…"</em> for consistency. This is the
-            graduate-level capability statement.
+            <Ann n={3} /> <strong>TLO description</strong> — Written as{" "}
+            <em>&quot;The student can…&quot;</em>. This is the graduate-level
+            capability statement.
           </li>
           <li>
             <Ann n={4} /> <strong>ILO Bloom level</strong> — The cognitive depth
-            of this specific, assessable outcome.
+            required for this specific outcome.
           </li>
           <li>
             <Ann n={5} /> <strong>ILO description</strong> — A concrete,
-            testable statement. Write as <em>"The student can…"</em>.
+            assessable statement, also written as{" "}
+            <em>&quot;The student can…&quot;</em>.
           </li>
           <li>
-            <Ann n={6} /> <strong>Course badge</strong> — Colored square
-            indicating the course where this ILO is addressed. Click to navigate
-            to that course.
+            <Ann n={6} /> <strong>Course badge</strong> — Colored square showing
+            the course where this ILO is addressed. Click to navigate there.
           </li>
         </ol>
       </Section>
 
-      <Section title="Workflow tips">
+      <Section title="Tips">
         <ul className="list-inside list-disc space-y-1.5 text-sm text-foreground/80">
           <li>
             Every TLO should have at least one ILO — a TLO with no ILOs is not
-            justified by the curriculum.
+            substantiated by the curriculum.
           </li>
           <li>
             Every ILO should be linked to at least one course — use the link
-            icon (<strong>⛓</strong>) on hover, or create ILOs directly from an
-            existing CLO.
+            icon on hover to manage links.
           </li>
-          <li>ILOs can be dragged between TLOs to reorganize.</li>
+          <li>ILOs can be dragged between TLOs to reorganize them.</li>
           <li>
-            Use consistent Bloom levels: ILO levels should collectively add up
-            to or exceed the TLO level.
+            ILO Bloom levels should collectively meet or exceed the TLO's Bloom
+            level.
           </li>
         </ul>
       </Section>
@@ -365,75 +360,65 @@ function CourseHelpPage() {
     <div>
       <h1 className="mb-1 text-xl font-bold">Course Page</h1>
       <p className="mb-5 text-sm text-muted-foreground">
-        See which trajectory ILOs are addressed in this course, optionally
-        organized under Course Learning Outcomes.
+        See which ILOs are linked to your course and how they map to existing
+        course objectives.
       </p>
 
       <Section title="What is the course page for?">
         <P>
-          The course page is the <em>course-side view</em> of the alignment map.
-          ILOs are created on the trajectory page and linked to courses — the
-          course page shows which ILOs land in your course and lets you organize
-          them using <strong>Course Learning Outcomes (CLOs)</strong>.
+          The course page shows the <strong>ILOs</strong> that have been linked
+          to this course from trajectories. These are specific, assessable
+          outcome statements that demonstrate how the course contributes to
+          broader curriculum goals.
         </P>
         <P>
-          CLOs are <strong>optional</strong> but recommended. Without CLOs, all
-          ILOs for this course sit in a single "ILOs without CLOs" bucket. By
-          creating CLOs and grouping ILOs into them, course coordinators can
-          communicate outcomes to students in their own terms — without exposing
-          the trajectory structure.
+          You can import your course&apos;s existing objectives from the course
+          manual as a reference point. ILOs can then be placed under the
+          relevant objective to make explicit which parts of the course cover
+          which trajectory outcomes.
         </P>
       </Section>
 
       <Section title="Anatomy of the course page">
-        <CloSectionMockup />
+        <CourseSectionMockup />
         <ol className="mt-2 space-y-1.5 text-sm text-foreground/80">
           <li>
-            <Ann n={1} /> <strong>ILOs without CLOs</strong> — ILOs linked to
-            this course but not yet placed under a CLO. Drag them into a CLO
-            section below.
+            <Ann n={1} /> <strong>Unplaced ILOs</strong> — ILOs linked to this
+            course that have not yet been placed under a course objective.
           </li>
           <li>
-            <Ann n={2} /> <strong>CLO</strong> — A course-scoped learning
-            objective
+            <Ann n={2} /> <strong>Course objective</strong> — An existing
+            outcome from the course manual, used as an organisational reference
+            (read-only).
           </li>
           <li>
-            <Ann n={3} /> <strong>CLO Bloom level</strong> — The cognitive depth
-            of this CLO as a whole.
+            <Ann n={3} /> <strong>Bloom level</strong> — The Bloom level of the
+            course objective, if specified.
           </li>
           <li>
-            <Ann n={4} /> <strong>ILO Bloom level</strong> — The cognitive depth
-            of this specific, assessable outcome.
-          </li>
-          <li>
-            <Ann n={5} /> <strong>ILO description</strong> — A concrete,
-            testable statement. Write as <em>"The student can…"</em>.
-          </li>
-          <li>
-            <Ann n={6} /> <strong>Trajectory badge</strong> — Colored circle
-            showing which trajectory this ILO belongs to. Click to navigate to
-            that trajectory.
+            <Ann n={4} /> <strong>Linked ILO</strong> — An ILO (created on the
+            trajectory page) placed under this course objective.
           </li>
         </ol>
       </Section>
 
-      <Section title="Workflow tips">
+      <Section title="Tips">
         <ul className="list-inside list-disc space-y-1.5 text-sm text-foreground/80">
           <li>
-            ILOs appear here automatically once they are linked to this course
-            on the trajectory page.
+            Course objectives are read-only — they come from the course manual.
+            Delete and re-add if there is a mistake.
           </li>
           <li>
-            Drag ILOs between CLO sections (or back to the top bucket) to
-            reorganize them.
+            Drag ILOs between course objective sections to reorganize them, or
+            drag them back to the unplaced bucket at the top.
           </li>
           <li>
-            CLOs are course-local: they are not shared across courses or visible
-            in the trajectory view.
+            Use the bulk importer to paste course objectives from a spreadsheet
+            or course manual in one go.
           </li>
           <li>
-            If you don't use CLOs, the overview matrix still shows the full
-            TLO→ILO→course alignment.
+            The Overview matrix shows trajectory coverage for this course based
+            on the ILOs linked to it.
           </li>
         </ul>
       </Section>
@@ -465,26 +450,22 @@ function OverviewPage({
         </div>
         <p className="mb-3 text-sm text-blue-800/80">
           You define the high-level outcomes of a learning program and ensure
-          they are covered and justified across courses.
+          they are covered and substantiated across courses.
         </p>
         <ol className="space-y-2">
           {(
             [
               [
-                "Add a trajectory",
-                "Use the sidebar to create a learning path or degree program.",
+                "Create a trajectory and define its TLOs",
+                "A trajectory is a cross-cutting learning theme. TLOs describe the broad competencies students should have by the end of it.",
               ],
               [
-                "Add TLOs",
-                'Trajectory Learning Outcomes: broad, program-level competency statements written as "The student can\u2026"',
+                "Break each TLO into ILOs and link them to courses",
+                "ILOs are specific, assessable outcomes. Each ILO belongs to one TLO and is linked to the course where it is taught.",
               ],
               [
-                "Break TLOs into ILOs",
-                "Intended Learning Outcomes: specific, assessable outcomes that justify how each TLO is achieved in practice.",
-              ],
-              [
-                "Link ILOs to courses",
-                "Collaborate with course coordinators to assign each ILO to the course where it is taught and assessed.",
+                "Use the Overview matrix to check coverage",
+                "The matrix shows which courses cover which trajectories, based on the ILOs linked to each course.",
               ],
             ] as [string, string][]
           ).map(([title, desc], i) => (
@@ -513,27 +494,27 @@ function OverviewPage({
           <h2 className="font-semibold text-emerald-900">Course Coordinator</h2>
         </div>
         <p className="mb-3 text-sm text-emerald-800/80">
-          You define how your course contributes to the curriculum and how its
-          outcomes are communicated to students.
+          You review which ILOs have been linked to your course and organise
+          them against your existing course objectives.
         </p>
         <ol className="space-y-2">
           {(
             [
               [
-                "Go to your course",
-                "Find your course in the sidebar, or ask a project admin to add it.",
+                "Import your course objectives",
+                "Paste the existing outcomes from your course manual via the bulk importer. These act as an organisational reference on the course page.",
               ],
               [
-                "Add CLOs",
-                'Course Learning Outcomes: outcome groupings that describe what students achieve in your course, written as "The student can\u2026"',
+                "Review ILOs with the trajectory coordinator",
+                "The trajectory coordinator creates ILOs and links them to your course. Review and discuss them together.",
               ],
               [
-                "Collaborate on ILOs",
-                "Work with the trajectory coordinator to create ILOs that link your CLOs to the broader curriculum goals.",
+                "Organise ILOs under course objectives",
+                "Drag ILOs into the relevant course objective section to show which part of your course covers each trajectory outcome.",
               ],
               [
-                "Organise ILOs under CLOs",
-                "Drag ILOs into CLO sections to present outcomes clearly to students, using your own course terminology.",
+                "Check the Overview matrix",
+                "See which trajectories your course contributes to, based on the ILOs linked to it.",
               ],
             ] as [string, string][]
           ).map(([title, desc], i) => (
@@ -561,67 +542,52 @@ function OverviewPage({
 function ConceptsPage() {
   return (
     <div>
-      <h1 className="mb-1 text-xl font-bold">TLOs, ILOs &amp; CLOs</h1>
+      <h1 className="mb-1 text-xl font-bold">TLOs &amp; ILOs</h1>
       <p className="mb-5 text-sm text-muted-foreground">
-        How the three levels of learning outcomes relate to each other.
+        The two levels of learning outcomes and how they work together.
       </p>
 
       <Section title="TLO — Trajectory Learning Outcome">
         <P>
-          A TLO is a broad, program-level statement of what students should
-          achieve by the end of a trajectory (a degree program, specialization,
-          or learning path). TLOs span multiple courses and describe
-          graduate-level competencies.
+          A <strong>TLO</strong> is a broad, program-level statement of what
+          students should be able to do by the end of a trajectory. TLOs span
+          multiple courses and describe graduate-level competencies — they are
+          not directly assessable on their own.
         </P>
         <Callout>
           Example: &quot;The student can critically evaluate social research and
           apply appropriate methods to investigate social issues.&quot;
         </Callout>
-      </Section>
-
-      <Section title="CLO — Course Learning Outcome">
         <P>
-          A CLO is a course-scoped outcome describing what students should
-          achieve by the end of a particular course. CLOs are more specific than
-          TLOs but still broad enough to be addressed by many different
-          assignments and activities within the course.
+          Think of a TLO as the <em>destination</em>: it states the end goal of
+          the trajectory without prescribing exactly how courses get there.
         </P>
-        <Callout>
-          Example: &quot;The student can apply qualitative research methods to
-          investigate lived experiences of social inequality.&quot;
-        </Callout>
       </Section>
 
       <Section title="ILO — Intended Learning Outcome">
         <P>
-          An ILO is a specific, assessable outcome that sits at the intersection
-          of a TLO and a CLO. ILOs are the most granular level — they pin down
-          exactly what students will demonstrate, in what context, and at what
-          level of cognitive depth.
-        </P>
-        <P>
-          Each ILO belongs to one TLO (its trajectory context) and is linked to
-          one CLO (its course context). This dual link creates an alignment map:
-          you can trace any ILO upward to a program goal and sideways to a
-          course expectation.
+          An <strong>ILO</strong> is a specific, assessable outcome that
+          contributes to a TLO. Each ILO belongs to one TLO and is linked to the
+          course where it is taught and assessed. ILOs are the concrete,
+          testable steps that together justify and substantiate the TLO.
         </P>
         <Callout>
           Example: &quot;The student can conduct a semi-structured interview,
           transcribe and thematically code the data, and interpret findings in
-          relation to a theoretical framework on social inequality.&quot;
+          relation to a theoretical framework.&quot;
         </Callout>
+        <P>
+          ILOs should be written as <em>&quot;The student can…&quot;</em> and
+          carry a Bloom level to make the expected cognitive depth explicit.
+        </P>
       </Section>
 
-      <Section title="Why are ILOs more specific than CLOs?">
+      <Section title="How they align">
         <P>
-          A CLO defines what a course broadly aims to achieve — it could be
-          satisfied by many different activities. An ILO narrows that down to a{" "}
-          <em>single, concrete demonstration</em>: it specifies the method, the
-          artifact, the context, and often the standard of quality.
-        </P>
-        <P>
-          Think of it this way: a CLO is a destination, and an ILO is the
-          specific route you take to reach it within a particular trajectory.
+          The relationship between TLOs and ILOs is one of justification: every
+          TLO must be substantiated by at least one ILO, and every ILO must be
+          linked to a course. Together they form a chain from graduate-level
+          goal down to a concrete, teachable activity.
         </P>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -631,9 +597,6 @@ function ConceptsPage() {
                 <th className="py-1.5 pr-4 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   TLO
                 </th>
-                <th className="py-1.5 pr-4 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  CLO
-                </th>
                 <th className="py-1.5 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   ILO
                 </th>
@@ -642,39 +605,61 @@ function ConceptsPage() {
             <tbody className="divide-y">
               <tr>
                 <td className="py-1.5 pr-4 font-medium text-muted-foreground">
-                  Level
+                  Scope
                 </td>
-                <td className="py-1.5 pr-4">Trajectory</td>
-                <td className="py-1.5 pr-4">Course</td>
-                <td className="py-1.5">Activity / Assessment</td>
+                <td className="py-1.5 pr-4">Trajectory-wide</td>
+                <td className="py-1.5">Single course</td>
               </tr>
               <tr>
                 <td className="py-1.5 pr-4 font-medium text-muted-foreground">
                   Specificity
                 </td>
-                <td className="py-1.5 pr-4">Low</td>
-                <td className="py-1.5 pr-4">Medium</td>
-                <td className="py-1.5">High</td>
+                <td className="py-1.5 pr-4">Broad</td>
+                <td className="py-1.5">Specific &amp; assessable</td>
               </tr>
               <tr>
                 <td className="py-1.5 pr-4 font-medium text-muted-foreground">
                   Directly assessable
                 </td>
                 <td className="py-1.5 pr-4">No</td>
-                <td className="py-1.5 pr-4">Partially</td>
                 <td className="py-1.5">Yes</td>
               </tr>
               <tr>
                 <td className="py-1.5 pr-4 font-medium text-muted-foreground">
                   Set by
                 </td>
-                <td className="py-1.5 pr-4">Program designers</td>
-                <td className="py-1.5 pr-4">Course instructors</td>
-                <td className="py-1.5">Both, in alignment</td>
+                <td className="py-1.5 pr-4">Trajectory coordinator</td>
+                <td className="py-1.5">Trajectory + course coordinator</td>
               </tr>
             </tbody>
           </table>
         </div>
+      </Section>
+
+      <Section title="The role of existing course objectives">
+        <P>
+          Most courses already have learning objectives in their course manual.
+          The purpose of this tool is to determine whether those objectives
+          connect to the trajectory goals — and, where needed, to reformulate
+          them as proper ILOs with a clear Bloom level and standardised wording.
+        </P>
+        <P>
+          You can import your course objectives into the course page (or they
+          may already have been imported for you). They act as an organisational
+          scaffold: once ILOs are created, drag them under the relevant
+          objective to make the link explicit. Objectives that are not yet
+          covered by any ILO are a signal that trajectory alignment work is
+          still needed. Also, if an ILO is not placed under any objective, it
+          indicates that either this ILO is not yet covered by the course, or
+          the previous objectives simply didn't capture it well.
+        </P>
+        <P>
+          If an existing objective is already well-formulated, you can base an
+          ILO directly on it — the ILO text may even be identical. The
+          distinction is that ILOs carry a verified Bloom level and are formally
+          linked to a TLO; the course objective is just the reference it came
+          from.
+        </P>
       </Section>
     </div>
   )
