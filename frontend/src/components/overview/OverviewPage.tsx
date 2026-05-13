@@ -1,9 +1,15 @@
-import { useMemo, useState } from 'react'
-import { X } from 'lucide-react'
-import { useApp } from '@/context/AppContext'
-import { OrderBadge } from '@/components/ui/order-badge'
-import { cn } from '@/lib/utils'
-import type { Ilo, Trajectory, Course } from '@/lib/types'
+import { useMemo, useState } from "react"
+import { useApp } from "@/context/AppContext"
+import { OrderBadge } from "@/components/ui/order-badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
+import type { Ilo, Trajectory, Course } from "@/lib/types"
 
 interface CellKey {
   courseId: number
@@ -20,11 +26,11 @@ export function OverviewPage() {
 
   const trajectories = useMemo(
     () => [...state.trajectories].sort((a, b) => a.name.localeCompare(b.name)),
-    [state.trajectories],
+    [state.trajectories]
   )
   const courses = useMemo(
     () => [...state.courses].sort((a, b) => a.code.localeCompare(b.code)),
-    [state.courses],
+    [state.courses]
   )
 
   // trajectoryId → Set of TLO ids
@@ -57,7 +63,10 @@ export function OverviewPage() {
       for (const traj of trajectories) {
         const tloIds = tloIdsByTrajectory.get(traj.id) ?? new Set<number>()
         const ilos = state.ilos.filter(
-          ilo => ilo.tloId !== null && tloIds.has(ilo.tloId) && courseIloIds.has(ilo.id),
+          (ilo) =>
+            ilo.tloId !== null &&
+            tloIds.has(ilo.tloId) &&
+            courseIloIds.has(ilo.id)
         )
         result.set(cellKey(course.id, traj.id), ilos)
       }
@@ -66,24 +75,19 @@ export function OverviewPage() {
   }, [courses, trajectories, state.ilos, iloIdsByCourse, tloIdsByTrajectory])
 
   const selectedIlos = selectedCell
-    ? (cellIlos.get(cellKey(selectedCell.courseId, selectedCell.trajectoryId)) ?? [])
+    ? (cellIlos.get(
+        cellKey(selectedCell.courseId, selectedCell.trajectoryId)
+      ) ?? [])
     : []
   const selectedTrajectory: Trajectory | undefined = selectedCell
-    ? trajectories.find(t => t.id === selectedCell.trajectoryId)
+    ? trajectories.find((t) => t.id === selectedCell.trajectoryId)
     : undefined
   const selectedCourse: Course | undefined = selectedCell
-    ? courses.find(c => c.id === selectedCell.courseId)
+    ? courses.find((c) => c.id === selectedCell.courseId)
     : undefined
 
   function handleCellClick(courseId: number, trajectoryId: number) {
-    if (
-      selectedCell?.courseId === courseId &&
-      selectedCell?.trajectoryId === trajectoryId
-    ) {
-      setSelectedCell(null)
-    } else {
-      setSelectedCell({ courseId, trajectoryId })
-    }
+    setSelectedCell({ courseId, trajectoryId })
   }
 
   const empty = trajectories.length === 0 || courses.length === 0
@@ -93,8 +97,8 @@ export function OverviewPage() {
       <div>
         <h1 className="text-2xl font-bold">Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Matrix of courses vs. trajectories — cells show how many ILOs from each trajectory are
-          covered by each course.
+          Matrix of courses vs. trajectories — cells show how many ILOs from
+          each trajectory are covered by each course.
         </p>
       </div>
 
@@ -108,20 +112,27 @@ export function OverviewPage() {
         <>
           {/* Matrix table */}
           <div className="overflow-auto rounded-md border">
-            <table className="border-collapse text-sm" style={{ minWidth: '100%' }}>
+            <table
+              className="border-collapse text-sm"
+              style={{ minWidth: "100%" }}
+            >
               <thead>
                 <tr>
                   {/* Top-left corner cell */}
-                  <th className="sticky left-0 z-20 min-w-44 border-b border-r bg-card px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
+                  <th className="sticky left-0 z-20 min-w-44 border-r border-b bg-card px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
                     Course
                   </th>
                   {trajectories.map((traj, i) => (
                     <th
                       key={traj.id}
-                      className="min-w-28 border-b border-r bg-card px-4 py-3 text-center text-xs font-semibold"
+                      className="min-w-28 border-r border-b bg-card px-4 py-3 text-center text-xs font-semibold"
                     >
                       <div className="flex flex-col items-center gap-1.5">
-                        <OrderBadge num={i + 1} color={traj.color} shape="circle" />
+                        <OrderBadge
+                          num={i + 1}
+                          color={traj.color}
+                          shape="circle"
+                        />
                         <span className="leading-tight">{traj.name}</span>
                       </div>
                     </th>
@@ -134,15 +145,25 @@ export function OverviewPage() {
                     {/* Course name — sticky */}
                     <td className="sticky left-0 z-10 border-r bg-card px-4 py-3 group-hover:bg-muted/40">
                       <div className="flex items-center gap-2">
-                        <OrderBadge num={ci + 1} color={course.color} shape="square" />
+                        <OrderBadge
+                          num={ci + 1}
+                          color={course.color}
+                          shape="square"
+                        />
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-medium">{course.code}</p>
+                          <p className="truncate text-xs font-medium">
+                            {course.code}
+                          </p>
                           {course.name && (
-                            <p className="truncate text-[10px] text-muted-foreground">{course.name}</p>
+                            <p className="truncate text-[10px] text-muted-foreground">
+                              {course.name}
+                            </p>
                           )}
                           {(course.start || course.end) && (
                             <p className="text-[10px] text-muted-foreground">
-                              {[course.start, course.end].filter(Boolean).join(' → ')}
+                              {[course.start, course.end]
+                                .filter(Boolean)
+                                .join(" → ")}
                             </p>
                           )}
                         </div>
@@ -150,8 +171,9 @@ export function OverviewPage() {
                     </td>
 
                     {/* One cell per trajectory */}
-                    {trajectories.map(traj => {
-                      const ilos = cellIlos.get(cellKey(course.id, traj.id)) ?? []
+                    {trajectories.map((traj) => {
+                      const ilos =
+                        cellIlos.get(cellKey(course.id, traj.id)) ?? []
                       const count = ilos.length
                       const isSelected =
                         selectedCell?.courseId === course.id &&
@@ -161,29 +183,31 @@ export function OverviewPage() {
                         <td
                           key={traj.id}
                           className={cn(
-                            'border-r px-3 py-3 text-center transition-colors',
-                            isSelected && 'bg-muted/60',
-                            !isSelected && 'group-hover:bg-muted/20',
+                            "border-r px-3 py-3 text-center transition-colors",
+                            isSelected && "bg-muted/60",
+                            !isSelected && "group-hover:bg-muted/20"
                           )}
                         >
                           {count > 0 ? (
                             <button
-                              onClick={() => handleCellClick(course.id, traj.id)}
+                              onClick={() =>
+                                handleCellClick(course.id, traj.id)
+                              }
                               className={cn(
-                                'mx-auto inline-flex size-8 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm transition-all hover:scale-110 hover:shadow-md',
-                                isSelected && 'ring-2 ring-offset-2 scale-110',
+                                "mx-auto inline-flex size-8 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm transition-all hover:scale-110 hover:shadow-md",
+                                isSelected && "scale-110 ring-2 ring-offset-2"
                               )}
                               style={{
                                 backgroundColor: traj.color,
                                 // @ts-ignore
-                                '--tw-ring-color': traj.color,
+                                "--tw-ring-color": traj.color,
                               }}
-                              title={`${count} ILO${count !== 1 ? 's' : ''} — click to expand`}
+                              title={`${count} ILO${count !== 1 ? "s" : ""} — click to expand`}
                             >
                               {count}
                             </button>
                           ) : (
-                            <span className="text-muted-foreground/25 text-base select-none">
+                            <span className="text-base text-muted-foreground/25 select-none">
                               ·
                             </span>
                           )}
@@ -196,50 +220,58 @@ export function OverviewPage() {
             </table>
           </div>
 
-          {/* ILO detail panel */}
-          {selectedCell && selectedIlos.length > 0 && (
-            <div className="rounded-lg border bg-muted/20 p-5">
-              <div className="mb-3 flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-semibold">
-                    ILOs covered by{' '}
-                    <span
-                      className="font-bold"
-                      style={{ color: selectedTrajectory?.color }}
-                    >
-                      {selectedTrajectory?.name}
-                    </span>{' '}
-                    in{' '}
-                    <span className="font-bold">{selectedCourse?.name}</span>
-                  </h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {selectedIlos.length} ILO{selectedIlos.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedCell(null)}
-                  className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-                  title="Close"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
+          {/* ILO detail modal */}
+          <Dialog
+            open={!!selectedCell}
+            onOpenChange={(open) => !open && setSelectedCell(null)}
+          >
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-base leading-snug">
+                  ILOs covered by{" "}
+                  <span style={{ color: selectedTrajectory?.color }}>
+                    {selectedTrajectory?.name}
+                  </span>{" "}
+                  in{" "}
+                  <span>
+                    {selectedCourse?.code}
+                    {selectedCourse?.name ? ` — ${selectedCourse.name}` : ""}
+                  </span>
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedIlos.length} ILO
+                  {selectedIlos.length !== 1 ? "s" : ""} matched
+                </DialogDescription>
+              </DialogHeader>
 
-              <ul className="space-y-2">
-                {selectedIlos.map(ilo => (
-                  <li key={ilo.id} className="flex gap-2 text-sm">
-                    <span
-                      className="mt-1.5 size-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: selectedTrajectory?.color ?? '#64748b' }}
-                    />
-                    <span className={cn(!ilo.description && 'italic text-muted-foreground')}>
-                      {ilo.description || 'No description'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+              {selectedIlos.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted-foreground italic">
+                  No ILOs for this combination.
+                </p>
+              ) : (
+                <ul className="mt-2 max-h-[60vh] space-y-2.5 overflow-y-auto pr-1">
+                  {selectedIlos.map((ilo) => (
+                    <li key={ilo.id} className="flex gap-2.5 text-sm">
+                      <span
+                        className="mt-1.5 size-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor:
+                            selectedTrajectory?.color ?? "#64748b",
+                        }}
+                      />
+                      <span
+                        className={cn(
+                          !ilo.description && "text-muted-foreground italic"
+                        )}
+                      >
+                        {ilo.description || "No description"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>
