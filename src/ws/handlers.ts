@@ -590,7 +590,12 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     if (courseId === undefined) continue
     const [inserted] = await db
       .insert(clos)
-      .values({ projectId, courseId, description: co.description ?? "" })
+      .values({
+        projectId,
+        courseId,
+        description: co.description ?? "",
+        bloomLevel: co.bloom_level ?? null,
+      })
       .returning()
     coMap.set(`${co.course}::${co.description}`, inserted.id)
   }

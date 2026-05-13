@@ -91,6 +91,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
     course_objectives: clos.map((co) => ({
       course: courseById.get(co.courseId)?.code ?? "",
       description: co.description,
+      bloom_level: co.bloomLevel ?? null,
     })),
     trajectories: trajectoryOutput,
   }

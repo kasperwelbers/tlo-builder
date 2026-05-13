@@ -214,7 +214,7 @@ export function CloPage({ courseId }: Props) {
   return (
     <div className="">
       <div className="flex items-center gap-3">
-        <h2 className="font-semibold text-foreground/60">Course</h2>
+        <h2 className="pl-1 font-semibold text-foreground/60">Course</h2>
         <Button
           variant="ghost"
           size="icon"
