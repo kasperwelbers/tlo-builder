@@ -27,7 +27,13 @@ import type { Course, Ilo } from "@/lib/types"
 // ── Config ────────────────────────────────────────────────────────────────────
 
 type GroupBy = "trajectory" | "eq"
-type CourseColId = "name" | "period" | "type" | "owner" | "coordinator"
+type CourseColId =
+  | "course"
+  | "year-block"
+  | "year"
+  | "type"
+  | "owner"
+  | "coordinator"
 type SortDir = "asc" | "desc"
 
 interface ColDef {
@@ -37,8 +43,13 @@ interface ColDef {
 }
 
 const COL_DEFS: ColDef[] = [
-  { id: "name", label: "Name", getValue: (c) => c.name },
-  { id: "period", label: "Period", getValue: (c) => c.start ?? "" },
+  { id: "course", label: "Course", getValue: (c) => c.code },
+  { id: "year-block", label: "Year-block", getValue: (c) => c.end ?? "" },
+  {
+    id: "year",
+    label: "Year",
+    getValue: (c) => (c.end ?? "").match(/\d+/)?.[0] ?? "",
+  },
   { id: "type", label: "Type", getValue: (c) => c.type },
   { id: "owner", label: "Owner", getValue: (c) => c.owner ?? "" },
   {
@@ -48,20 +59,32 @@ const COL_DEFS: ColDef[] = [
   },
 ]
 
-const DEFAULT_COLS = new Set<CourseColId>(["name", "period"])
+const DEFAULT_COLS = new Set<CourseColId>(["course", "year-block"])
 
-// ── Helper ────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function CourseCell({ colId, course }: { colId: CourseColId; course: Course }) {
   const dash = <span className="italic opacity-30">—</span>
   switch (colId) {
-    case "name":
-      return <span className="text-xs">{course.name || dash}</span>
-    case "period": {
-      const p = [course.start, course.end].filter(Boolean).join(" → ")
+    case "course": {
+      const label = course.name
+        ? `${course.name} (${course.code})`
+        : course.code
+      return (
+        <span className="truncate text-xs font-medium">{label || dash}</span>
+      )
+    }
+    case "year-block":
       return (
         <span className="text-xs whitespace-nowrap text-muted-foreground">
-          {p || dash}
+          {course.end || dash}
+        </span>
+      )
+    case "year": {
+      const yr = (course.end ?? "").match(/\d+/)?.[0]
+      return (
+        <span className="text-xs whitespace-nowrap text-muted-foreground">
+          {yr || dash}
         </span>
       )
     }
@@ -162,12 +185,23 @@ function FilterButton({
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface GroupedRow {
+  /** Stable key = active column values joined by \0 */
+  key: string
+  /** All courses aggregated into this row */
+  courses: Course[]
+  /** Shared column values (same for every course in this group) */
+  colValues: Record<CourseColId, string>
+}
 
 interface SelectedCell {
-  courseId: number
+  groupKey: string
   dataColId: number
 }
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export function OverviewPage() {
   const { state } = useApp()
@@ -177,7 +211,7 @@ export function OverviewPage() {
   const [activeCols, setActiveCols] = useState<Set<CourseColId>>(
     new Set(DEFAULT_COLS)
   )
-  const [sortCol, setSortCol] = useState<CourseColId>("period")
+  const [sortCol, setSortCol] = useState<CourseColId>("year-block")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null)
   const [filterTypes, setFilterTypes] = useState<Set<string>>(new Set())
@@ -297,6 +331,21 @@ export function OverviewPage() {
     return `${p}:${courseId}:${dataColId}`
   }
 
+  /** Aggregate unique ILOs for a group of courses against one data column. */
+  const groupCellIlos = (courses: Course[], dataColId: number): Ilo[] => {
+    const seen = new Set<number>()
+    const result: Ilo[] = []
+    for (const course of courses) {
+      for (const ilo of allCellIlos.get(cellKey(course.id, dataColId)) ?? []) {
+        if (!seen.has(ilo.id)) {
+          seen.add(ilo.id)
+          result.push(ilo)
+        }
+      }
+    }
+    return result
+  }
+
   // ── Filter options ──────────────────────────────────────────────────────────
   const uniqueTypes = useMemo(
     () =>
@@ -349,6 +398,29 @@ export function OverviewPage() {
   // ── Active columns list ──────────────────────────────────────────────────────
   const activeColList = COL_DEFS.filter((c) => activeCols.has(c.id))
 
+  // ── Grouped rows: aggregate courses by unique combo of active column values ──
+  const groupedRows = useMemo((): GroupedRow[] => {
+    const groups = new Map<
+      string,
+      { courses: Course[]; colValues: Record<CourseColId, string> }
+    >()
+    for (const course of displayedCourses) {
+      const colValues = Object.fromEntries(
+        COL_DEFS.map((def) => [def.id, def.getValue(course)])
+      ) as Record<CourseColId, string>
+      // Group key = active column values joined (preserves sort order via displayedCourses)
+      const key = activeColList.map((col) => col.getValue(course)).join("\0")
+      if (!groups.has(key)) {
+        groups.set(key, { courses: [], colValues })
+      }
+      groups.get(key)!.courses.push(course)
+    }
+    return Array.from(groups.entries()).map(([key, value]) => ({
+      key,
+      ...value,
+    }))
+  }, [displayedCourses, activeColList])
+
   // ── Current data columns ─────────────────────────────────────────────────────
   const currentDataCols = useMemo(() => {
     if (showTlo)
@@ -381,14 +453,23 @@ export function OverviewPage() {
   ])
 
   // ── Dialog data ──────────────────────────────────────────────────────────────
-  const selectedIlos = selectedCell
-    ? (allCellIlos.get(
-        cellKey(selectedCell.courseId, selectedCell.dataColId)
-      ) ?? [])
-    : []
-  const selectedCourse = selectedCell
-    ? state.courses.find((c) => c.id === selectedCell.courseId)
+  const selectedGroup = selectedCell
+    ? (groupedRows.find((g) => g.key === selectedCell.groupKey) ?? null)
     : null
+
+  const selectedIlos =
+    selectedCell && selectedGroup
+      ? groupCellIlos(selectedGroup.courses, selectedCell.dataColId)
+      : []
+
+  const selectedGroupLabel = selectedGroup
+    ? activeColList.length === 0
+      ? "all courses"
+      : activeColList
+          .map((col) => selectedGroup.colValues[col.id] || "—")
+          .join(" · ")
+    : ""
+
   const selectedColColor = selectedCell
     ? showTlo
       ? trajectoryById.get(
@@ -508,6 +589,7 @@ export function OverviewPage() {
                     const next = new Set(activeCols)
                     on ? next.delete(col.id) : next.add(col.id)
                     setActiveCols(next)
+                    setSelectedCell(null)
                   }}
                 >
                   <div
@@ -570,21 +652,15 @@ export function OverviewPage() {
                   // Two-level header: trajectory or eq on top, TLOs below
                   <>
                     <tr>
-                      <th
-                        rowSpan={2}
-                        className="sticky left-0 z-20 border-r border-b bg-card px-3 py-2 text-left align-bottom"
-                        style={{ minWidth: 120 }}
-                      >
-                        <span className="text-xs font-semibold text-muted-foreground">
-                          Code
-                        </span>
-                      </th>
-                      {activeColList.map((col) => (
+                      {activeColList.map((col, colIdx) => (
                         <th
                           key={col.id}
                           rowSpan={2}
-                          className="cursor-pointer border-r border-b bg-card px-3 py-2 text-left align-bottom select-none hover:bg-muted/50"
-                          style={{ minWidth: 90 }}
+                          className={cn(
+                            "cursor-pointer border-r border-b bg-card px-3 py-2 text-left align-bottom select-none hover:bg-muted/50",
+                            colIdx === 0 && "sticky left-0 z-20"
+                          )}
+                          style={{ minWidth: colIdx === 0 ? 120 : 90 }}
                           onClick={() => toggleSort(col.id)}
                         >
                           <span className="text-xs font-semibold text-muted-foreground">
@@ -648,19 +724,14 @@ export function OverviewPage() {
                 ) : (
                   // Single-level header for trajectory / eq modes
                   <tr>
-                    <th
-                      className="sticky left-0 z-20 border-r border-b bg-card px-3 py-2 text-left"
-                      style={{ minWidth: 120 }}
-                    >
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        Code
-                      </span>
-                    </th>
-                    {activeColList.map((col) => (
+                    {activeColList.map((col, colIdx) => (
                       <th
                         key={col.id}
-                        className="cursor-pointer border-r border-b bg-card px-3 py-2 text-left select-none hover:bg-muted/50"
-                        style={{ minWidth: 90 }}
+                        className={cn(
+                          "cursor-pointer border-r border-b bg-card px-3 py-2 text-left select-none hover:bg-muted/50",
+                          colIdx === 0 && "sticky left-0 z-20"
+                        )}
+                        style={{ minWidth: colIdx === 0 ? 120 : 90 }}
                         onClick={() => toggleSort(col.id)}
                       >
                         <span className="text-xs font-semibold text-muted-foreground">
@@ -697,51 +768,40 @@ export function OverviewPage() {
               </thead>
 
               <tbody className="divide-y">
-                {displayedCourses.length === 0 ? (
+                {groupedRows.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={
-                        1 + activeColList.length + currentDataCols.length
-                      }
+                      colSpan={activeColList.length + currentDataCols.length}
                       className="py-12 text-center text-sm text-muted-foreground italic"
                     >
                       No courses match the current filters.
                     </td>
                   </tr>
                 ) : (
-                  displayedCourses.map((course, ci) => (
-                    <tr key={course.id} className="group">
-                      {/* Sticky code */}
-                      <td className="sticky left-0 z-10 border-r bg-card px-3 py-2 group-hover:bg-muted/40">
-                        <div className="flex items-center gap-2">
-                          <OrderBadge
-                            label={String(ci + 1)}
-                            color={course.color}
-                            shape="square"
-                          />
-                          <span className="truncate text-xs font-medium">
-                            {course.code}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Optional course columns */}
-                      {activeColList.map((col) => (
+                  groupedRows.map((group) => (
+                    <tr key={group.key} className="group/row">
+                      {/* Course property columns (all optional, first is sticky) */}
+                      {activeColList.map((col, colIdx) => (
                         <td
                           key={col.id}
-                          className="border-r bg-card px-3 py-2 group-hover:bg-muted/40"
+                          className={cn(
+                            "border-r bg-card px-3 py-2 group-hover/row:bg-muted/40",
+                            colIdx === 0 && "sticky left-0 z-10"
+                          )}
                         >
-                          <CourseCell colId={col.id} course={course} />
+                          <CourseCell
+                            colId={col.id}
+                            course={group.courses[0]}
+                          />
                         </td>
                       ))}
 
                       {/* Data cells */}
                       {currentDataCols.map((dcol) => {
-                        const ilos =
-                          allCellIlos.get(cellKey(course.id, dcol.id)) ?? []
+                        const ilos = groupCellIlos(group.courses, dcol.id)
                         const count = ilos.length
                         const isSelected =
-                          selectedCell?.courseId === course.id &&
+                          selectedCell?.groupKey === group.key &&
                           selectedCell?.dataColId === dcol.id
                         return (
                           <td
@@ -750,14 +810,14 @@ export function OverviewPage() {
                               "border-r px-2 py-2 text-center transition-colors",
                               isSelected
                                 ? "bg-muted/60"
-                                : "group-hover:bg-muted/20"
+                                : "group-hover/row:bg-muted/20"
                             )}
                           >
                             {count > 0 ? (
                               <button
                                 onClick={() =>
                                   setSelectedCell({
-                                    courseId: course.id,
+                                    groupKey: group.key,
                                     dataColId: dcol.id,
                                   })
                                 }
@@ -797,12 +857,7 @@ export function OverviewPage() {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle className="text-base leading-snug">
-                  ILOs in{" "}
-                  <span>
-                    {selectedCourse?.code}
-                    {selectedCourse?.name ? ` — ${selectedCourse.name}` : ""}
-                  </span>{" "}
-                  covered by{" "}
+                  ILOs for <span>{selectedGroupLabel}</span> covered by{" "}
                   <span style={{ color: selectedColColor }}>
                     {selectedColLabel}
                   </span>
@@ -810,6 +865,9 @@ export function OverviewPage() {
                 <DialogDescription>
                   {selectedIlos.length} ILO
                   {selectedIlos.length !== 1 ? "s" : ""} matched
+                  {selectedGroup && selectedGroup.courses.length > 1 && (
+                    <> across {selectedGroup.courses.length} courses</>
+                  )}
                 </DialogDescription>
               </DialogHeader>
 

@@ -353,37 +353,40 @@ export function IloPage({ courseId }: Props) {
         </div>
       </div>
       {/* ── Course header ─────────────────────────────────────────────────── */}
-      <div className="space-y-6 pt-1">
+      <div className="pt-1">
         {/* Title and description */}
+
+        {editingField === "name" ? (
+          <Input
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="h-auto border-0 px-1 text-2xl font-bold shadow-none focus-visible:ring-0"
+            autoFocus
+            onBlur={handleSave}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSave()
+              if (e.key === "Escape") setEditingField(null)
+            }}
+          />
+        ) : (
+          <p
+            role="button"
+            tabIndex={0}
+            className="cursor-pointer rounded px-1 text-2xl font-bold hover:bg-muted/50"
+            onClick={() => handleStartEdit("name", course.name || "")}
+          >
+            {course.name || (
+              <span className="italic opacity-50">Full course name</span>
+            )}
+          </p>
+        )}
+
         <div>
           {editingField === "code" ? (
             <Input
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
-              className="h-auto border-0 px-1 text-2xl font-bold shadow-none focus-visible:ring-0"
-              autoFocus
-              onBlur={handleSave}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSave()
-                if (e.key === "Escape") setEditingField(null)
-              }}
-            />
-          ) : (
-            <h1
-              role="button"
-              tabIndex={0}
-              className="cursor-pointer rounded px-1 text-2xl font-bold hover:bg-muted/50"
-              onClick={() => handleStartEdit("code", course.code)}
-            >
-              {course.code}
-            </h1>
-          )}
-
-          {editingField === "name" ? (
-            <Input
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              className="mt-1 text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground"
               autoFocus
               onBlur={handleSave}
               onKeyDown={(e) => {
@@ -395,12 +398,10 @@ export function IloPage({ courseId }: Props) {
             <p
               role="button"
               tabIndex={0}
-              className="mt-1 cursor-pointer rounded px-1 text-sm text-muted-foreground hover:bg-muted/50"
-              onClick={() => handleStartEdit("name", course.name || "")}
+              className="cursor-pointer rounded px-1 text-sm text-muted-foreground hover:bg-muted/50"
+              onClick={() => handleStartEdit("code", course.code)}
             >
-              {course.name || (
-                <span className="italic opacity-50">Full course name</span>
-              )}
+              {course.code}
             </p>
           )}
 
