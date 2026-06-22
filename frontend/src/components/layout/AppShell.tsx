@@ -83,13 +83,20 @@ export function AppShell({
       ),
     [state.trajectories]
   )
-  const courses = useMemo(
-    () =>
-      [...state.courses].sort((a, b) =>
-        a.code.localeCompare(b.code, undefined, { numeric: true })
-      ),
-    [state.courses]
-  )
+  const courses = useMemo(() => {
+    function parsePeriod(s: string | null): [number, number] {
+      if (!s) return [Infinity, Infinity]
+      const [y, b] = s.split("-").map(Number)
+      return [y ?? 0, b ?? 0]
+    }
+    return [...state.courses].sort((a, b) => {
+      const [ay, ab] = parsePeriod(a.start)
+      const [by, bb] = parsePeriod(b.start)
+      if (ay !== by) return ay - by
+      if (ab !== bb) return ab - bb
+      return a.code.localeCompare(b.code, undefined, { numeric: true })
+    })
+  }, [state.courses])
 
   const [courseSearch, setCourseSearch] = useState("")
   const courseIndexMap = useMemo(
@@ -152,6 +159,11 @@ export function AppShell({
   const [newCourseCoordinator, setNewCourseCoordinator] = useState("")
   const [newCourseStart, setNewCourseStart] = useState("")
   const [newCourseEnd, setNewCourseEnd] = useState("")
+  const [newCourseType, setNewCourseType] = useState("")
+  const [newCourseOwner, setNewCourseOwner] = useState("")
+  const [newCourseLevel, setNewCourseLevel] = useState("")
+  const [newCourseEc, setNewCourseEc] = useState("")
+  const [newCourseObjectives, setNewCourseObjectives] = useState("")
 
   function openAddCourse() {
     setNewCourseCode("")
@@ -160,20 +172,38 @@ export function AppShell({
     setNewCourseCoordinator("")
     setNewCourseStart("")
     setNewCourseEnd("")
+    setNewCourseType("")
+    setNewCourseOwner("")
+    setNewCourseLevel("")
+    setNewCourseEc("")
+    setNewCourseObjectives("")
     setAddCourseOpen(true)
   }
 
   function submitAddCourse() {
     const code = newCourseCode.trim()
     if (!code) return
+    const objectives = newCourseObjectives
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean)
     send({
-      type: "course:create",
-      code,
-      name: newCourseName.trim(),
-      color: newCourseColor,
-      coordinator: newCourseCoordinator.trim() || null,
-      start: newCourseStart.trim() || null,
-      end: newCourseEnd.trim() || null,
+      type: "course:bulk_create",
+      courses: [
+        {
+          code,
+          name: newCourseName.trim(),
+          color: newCourseColor,
+          coordinator: newCourseCoordinator.trim() || null,
+          start: newCourseStart.trim() || null,
+          end: newCourseEnd.trim() || null,
+          type: newCourseType.trim(),
+          owner: newCourseOwner.trim() || null,
+          level: newCourseLevel.trim() ? Number(newCourseLevel.trim()) : null,
+          ec: newCourseEc.trim() ? Number(newCourseEc.trim()) : null,
+          current_ilos: objectives,
+        },
+      ],
     })
     setAddCourseOpen(false)
   }
@@ -518,8 +548,8 @@ export function AppShell({
                           </button>
                         </TooltipTrigger>
                         <TooltipContent side="right">
-                          {c.code}
-                          {c.name ? `: ${c.name}` : ""}
+                          {c.name || c.code}
+                          {c.start ? ` (${c.start})` : ""}
                         </TooltipContent>
                       </Tooltip>
                     )
@@ -533,7 +563,14 @@ export function AppShell({
                       className={btnClass}
                     >
                       {badge}
-                      <span className="truncate">{c.code}</span>
+                      {c.start && (
+                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70">
+                          {c.start}
+                        </span>
+                      )}
+                      <span className="min-w-0 truncate">
+                        {c.name || c.code}
+                      </span>
                     </button>
                   )
                 })}
@@ -627,7 +664,7 @@ export function AppShell({
 
         {/* Add Course Dialog */}
         <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>New course</DialogTitle>
             </DialogHeader>
@@ -659,6 +696,62 @@ export function AppShell({
                   placeholder="Full course name"
                   rows={2}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>
+                    Type{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    value={newCourseType}
+                    onChange={(e) => setNewCourseType(e.target.value)}
+                    placeholder="e.g. elective"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>
+                    Owner{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    value={newCourseOwner}
+                    onChange={(e) => setNewCourseOwner(e.target.value)}
+                    placeholder="department or faculty"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>
+                    Level{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    value={newCourseLevel}
+                    onChange={(e) => setNewCourseLevel(e.target.value)}
+                    placeholder="e.g. 3"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>
+                    EC{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <Input
+                    value={newCourseEc}
+                    onChange={(e) => setNewCourseEc(e.target.value)}
+                    placeholder="e.g. 6"
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>
@@ -706,6 +799,20 @@ export function AppShell({
                 <ColorPicker
                   value={newCourseColor}
                   onChange={setNewCourseColor}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  Course objectives{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (as currently in course manual, one per line)
+                  </span>
+                </Label>
+                <Textarea
+                  value={newCourseObjectives}
+                  onChange={(e) => setNewCourseObjectives(e.target.value)}
+                  placeholder={`The student can…\nThe student can…`}
+                  rows={3}
                 />
               </div>
             </div>

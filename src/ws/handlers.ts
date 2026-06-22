@@ -158,6 +158,8 @@ async function createCourse(db: DB, data: any) {
       end: data.end ?? null,
       type: data.courseType ?? data.type ?? "",
       owner: data.owner ?? null,
+      level: data.level ?? null,
+      ec: data.ec ?? null,
     })
     .onConflictDoNothing()
 }
@@ -174,6 +176,8 @@ async function updateCourse(db: DB, data: any) {
       end: data.end ?? null,
       type: data.courseType ?? data.type ?? "",
       owner: data.owner ?? null,
+      level: data.level ?? null,
+      ec: data.ec ?? null,
     })
     .where(
       and(eq(courses.id, data.courseId), eq(courses.projectId, data.projectId))
@@ -618,6 +622,8 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
       end?: string | null
       type?: string
       owner?: string | null
+      level?: number | null
+      ec?: number | null
       current_ilos?: string[]
       clos?: string[]
     }>
@@ -640,6 +646,8 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
         end: courseData.end ?? null,
         type: courseData.type ?? "",
         owner: courseData.owner ?? null,
+        level: courseData.level ?? null,
+        ec: courseData.ec ?? null,
       })
       .onConflictDoUpdate({
         target: [courses.projectId, courses.code],
@@ -651,6 +659,8 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
           end: courseData.end ?? null,
           type: courseData.type ?? "",
           owner: courseData.owner ?? null,
+          level: courseData.level ?? null,
+          ec: courseData.ec ?? null,
         },
       })
 
@@ -703,6 +713,9 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
   await db.delete(currentIlos).where(eq(currentIlos.projectId, projectId))
   await db.delete(ilos).where(eq(ilos.projectId, projectId))
   await db.delete(tlos).where(eq(tlos.projectId, projectId))
+  await db
+    .delete(exitQualifications)
+    .where(eq(exitQualifications.projectId, projectId))
   await db.delete(trajectories).where(eq(trajectories.projectId, projectId))
   await db.delete(courses).where(eq(courses.projectId, projectId))
 
@@ -765,6 +778,22 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
   const trajectoryNameToId = new Map<string, number>()
   const tloKeyToId = new Map<string, number>() // key: "trajName::tloName"
   const iloDescToId = new Map<string, number>() // key: ilo description
+
+  // 0. Import exit qualifications
+  const eqNameToId = new Map<string, number>()
+  for (const eqData of payload.exit_qualifications ?? []) {
+    const name = (eqData.name ?? "").trim()
+    if (!name) continue
+    const [inserted] = await db
+      .insert(exitQualifications)
+      .values({
+        projectId,
+        name,
+        description: eqData.description ?? "",
+      })
+      .returning()
+    eqNameToId.set(name, inserted.id)
+  }
 
   // 1. Upsert courses from the dedicated courses section (preserves color, coordinator, etc.)
   const courseCodeToId = new Map<string, number>()
@@ -835,6 +864,7 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
           name: tloData.name,
           description: tloData.description ?? "",
           bloomLevel: tloData.bloom_level ?? null,
+          eqId: tloData.eq ? (eqNameToId.get(tloData.eq) ?? null) : null,
         })
         .returning()
       tloKeyToId.set(`${traj.name}::${tloData.name}`, newTlo.id)
@@ -944,5 +974,6 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     "current_ilos",
     "ilo_current_ilo_mappings",
     "comments",
+    "exit_qualifications",
   ]
 }

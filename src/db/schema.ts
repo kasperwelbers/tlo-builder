@@ -43,6 +43,8 @@ export const courses = sqliteTable(
     coordinator: text("coordinator"),
     start: text("start"),
     end: text("end"),
+    level: integer("level"),
+    ec: integer("ec"),
     type: text("type").notNull().default(""),
     owner: text("owner"),
   },

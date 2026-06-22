@@ -67,6 +67,8 @@ export interface Course {
   end: string | null
   type: string
   owner: string | null
+  level: number | null
+  ec: number | null
 }
 export interface AppState {
   trajectories: Trajectory[]

@@ -12,6 +12,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
     trajectories,
     courses,
     comments,
+    exitQualifications,
   } = state
   const tloIloMappings = ilos
     .filter((i) => i.tloId !== null)
@@ -40,6 +41,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
   }
 
   const iloById = new Map(ilos.map((i) => [i.id, i]))
+  const eqById = new Map(exitQualifications.map((e) => [e.id, e]))
 
   const tlosByTrajectory = new Map<number, typeof tlos>()
   for (const tlo of tlos) {
@@ -70,6 +72,10 @@ export function exportToYaml(state: AppState, projectName: string): void {
           description: tlo.description,
           bloom_level: tlo.bloomLevel ?? null,
         }
+        if (tlo.eqId != null) {
+          const eq = eqById.get(tlo.eqId)
+          if (eq) tloEntry.eq = eq.name
+        }
         if (iloEntries.length) tloEntry.ilos = iloEntries
         return tloEntry
       })
@@ -92,6 +98,8 @@ export function exportToYaml(state: AppState, projectName: string): void {
       if (c.end) entry.end = c.end
       if (c.type) entry.type = c.type
       if (c.owner) entry.owner = c.owner
+      if (c.level != null) entry.level = c.level
+      if (c.ec != null) entry.ec = c.ec
       return entry
     })
 
@@ -147,6 +155,13 @@ export function exportToYaml(state: AppState, projectName: string): void {
     })
     .filter((e) => e.trajectory != null || e.course != null)
 
+  const exitQualificationsOutput = [...exitQualifications]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((eq) => ({
+      name: eq.name,
+      ...(eq.description ? { description: eq.description } : {}),
+    }))
+
   const doc = {
     exported: new Date().toISOString(),
     courses: coursesOutput,
@@ -155,6 +170,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
       description: co.description,
       bloom_level: co.bloomLevel ?? null,
     })),
+    exit_qualifications: exitQualificationsOutput,
     trajectories: trajectoryOutput,
     comments: commentsOutput,
   }

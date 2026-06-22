@@ -26,7 +26,7 @@ import type { Course, Ilo } from "@/lib/types"
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-type GroupBy = "trajectory" | "eq" | "tlo"
+type GroupBy = "trajectory" | "eq"
 type CourseColId = "name" | "period" | "type" | "owner" | "coordinator"
 type SortDir = "asc" | "desc"
 
@@ -173,6 +173,7 @@ export function OverviewPage() {
   const { state } = useApp()
 
   const [groupBy, setGroupBy] = useState<GroupBy>("trajectory")
+  const [showTlo, setShowTlo] = useState(false)
   const [activeCols, setActiveCols] = useState<Set<CourseColId>>(
     new Set(DEFAULT_COLS)
   )
@@ -242,9 +243,26 @@ export function OverviewPage() {
       .filter((g) => g.tlos.length > 0)
   }, [sortedTrajectories, state.tlos])
 
+  // TLOs grouped by exit qualification (for two-level header)
+  const tloGroupsByEq = useMemo(() => {
+    return dataColsEq
+      .map((eq) => ({
+        eq,
+        tlos: state.tlos
+          .filter((t) => t.eqId === eq.id)
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true })
+          ),
+      }))
+      .filter((g) => g.tlos.length > 0)
+  }, [dataColsEq, state.tlos])
+
   const dataColsTlo = useMemo(
-    () => tloGroups.flatMap((g) => g.tlos),
-    [tloGroups]
+    () =>
+      groupBy === "trajectory"
+        ? tloGroups.flatMap((g) => g.tlos)
+        : tloGroupsByEq.flatMap((g) => g.tlos),
+    [groupBy, tloGroups, tloGroupsByEq]
   )
 
   // ── Cell ILO map (all three modes computed together) ─────────────────────────
@@ -274,7 +292,8 @@ export function OverviewPage() {
   }, [state.iloCurrentIloMappings, iloById, tloById])
 
   const cellKey = (courseId: number, dataColId: number) => {
-    const p = groupBy === "trajectory" ? "t" : groupBy === "eq" ? "e" : "l"
+    if (showTlo) return `l:${courseId}:${dataColId}`
+    const p = groupBy === "trajectory" ? "t" : "e"
     return `${p}:${courseId}:${dataColId}`
   }
 
@@ -332,6 +351,13 @@ export function OverviewPage() {
 
   // ── Current data columns ─────────────────────────────────────────────────────
   const currentDataCols = useMemo(() => {
+    if (showTlo)
+      return dataColsTlo.map((t) => ({
+        id: t.id,
+        label: t.name,
+        color: trajectoryById.get(t.trajectoryId)?.color,
+        badge: "",
+      }))
     if (groupBy === "trajectory")
       return dataColsTrajectory.map((t, i) => ({
         id: t.id,
@@ -339,20 +365,20 @@ export function OverviewPage() {
         color: t.color,
         badge: String.fromCharCode(65 + i),
       }))
-    if (groupBy === "eq")
-      return dataColsEq.map((e) => ({
-        id: e.id,
-        label: e.name,
-        color: undefined,
-        badge: "",
-      }))
-    return dataColsTlo.map((t) => ({
-      id: t.id,
-      label: t.name,
-      color: trajectoryById.get(t.trajectoryId)?.color,
+    return dataColsEq.map((e) => ({
+      id: e.id,
+      label: e.name,
+      color: undefined,
       badge: "",
     }))
-  }, [groupBy, dataColsTrajectory, dataColsEq, dataColsTlo, trajectoryById])
+  }, [
+    showTlo,
+    groupBy,
+    dataColsTlo,
+    dataColsTrajectory,
+    dataColsEq,
+    trajectoryById,
+  ])
 
   // ── Dialog data ──────────────────────────────────────────────────────────────
   const selectedIlos = selectedCell
@@ -364,20 +390,20 @@ export function OverviewPage() {
     ? state.courses.find((c) => c.id === selectedCell.courseId)
     : null
   const selectedColColor = selectedCell
-    ? groupBy === "trajectory"
-      ? trajectoryById.get(selectedCell.dataColId)?.color
-      : groupBy === "tlo"
-        ? trajectoryById.get(
-            tloById.get(selectedCell.dataColId)?.trajectoryId ?? -1
-          )?.color
+    ? showTlo
+      ? trajectoryById.get(
+          tloById.get(selectedCell.dataColId)?.trajectoryId ?? -1
+        )?.color
+      : groupBy === "trajectory"
+        ? trajectoryById.get(selectedCell.dataColId)?.color
         : undefined
     : undefined
   const selectedColLabel = selectedCell
-    ? ((groupBy === "trajectory"
-        ? trajectoryById.get(selectedCell.dataColId)?.name
-        : groupBy === "eq"
-          ? eqById.get(selectedCell.dataColId)?.name
-          : tloById.get(selectedCell.dataColId)?.name) ?? "—")
+    ? showTlo
+      ? (tloById.get(selectedCell.dataColId)?.name ?? "—")
+      : groupBy === "trajectory"
+        ? (trajectoryById.get(selectedCell.dataColId)?.name ?? "—")
+        : (eqById.get(selectedCell.dataColId)?.name ?? "—")
     : ""
 
   // ── Empty state ──────────────────────────────────────────────────────────────
@@ -391,11 +417,13 @@ export function OverviewPage() {
         <h1 className="text-2xl font-bold">Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Matrix of courses vs.{" "}
-          {groupBy === "trajectory"
-            ? "trajectories"
-            : groupBy === "eq"
-              ? "exit qualifications"
-              : "TLOs"}
+          {showTlo
+            ? groupBy === "trajectory"
+              ? "TLOs (grouped by trajectory)"
+              : "TLOs (grouped by exit qualification)"
+            : groupBy === "trajectory"
+              ? "trajectories"
+              : "exit qualifications"}
         </p>
       </div>
 
@@ -407,7 +435,7 @@ export function OverviewPage() {
             Group by:
           </span>
           <div className="flex overflow-hidden rounded-md border text-xs">
-            {(["trajectory", "eq", "tlo"] as GroupBy[]).map((mode, i) => (
+            {(["trajectory", "eq"] as GroupBy[]).map((mode, i) => (
               <button
                 key={mode}
                 onClick={() => {
@@ -422,11 +450,34 @@ export function OverviewPage() {
                     : "text-muted-foreground hover:bg-muted"
                 )}
               >
-                {mode === "trajectory"
-                  ? "Trajectory"
-                  : mode === "eq"
-                    ? "Exit Qualification"
-                    : "TLO"}
+                {mode === "trajectory" ? "Trajectory" : "Exit Qualification"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Show TLOs toggle */}
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-xs text-muted-foreground">
+            Show TLOs:
+          </span>
+          <div className="flex overflow-hidden rounded-md border text-xs">
+            {([false, true] as const).map((val, i) => (
+              <button
+                key={String(val)}
+                onClick={() => {
+                  setShowTlo(val)
+                  setSelectedCell(null)
+                }}
+                className={cn(
+                  "px-2.5 py-1 transition-colors",
+                  i > 0 && "border-l",
+                  showTlo === val
+                    ? "bg-foreground font-medium text-background"
+                    : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {val ? "Yes" : "No"}
               </button>
             ))}
           </div>
@@ -515,8 +566,8 @@ export function OverviewPage() {
               style={{ minWidth: "100%" }}
             >
               <thead>
-                {groupBy === "tlo" ? (
-                  // Two-level header for TLO mode
+                {showTlo ? (
+                  // Two-level header: trajectory or eq on top, TLOs below
                   <>
                     <tr>
                       <th
@@ -545,23 +596,40 @@ export function OverviewPage() {
                           </span>
                         </th>
                       ))}
-                      {tloGroups.map((g) => (
-                        <th
-                          key={g.trajectory.id}
-                          colSpan={g.tlos.length}
-                          className="border-r border-b bg-card px-3 py-2 text-center"
-                        >
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span
-                              className="size-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: g.trajectory.color }}
-                            />
-                            <span className="text-xs font-semibold">
-                              {g.trajectory.name}
-                            </span>
-                          </div>
-                        </th>
-                      ))}
+                      {(groupBy === "trajectory"
+                        ? tloGroups
+                        : tloGroupsByEq
+                      ).map((g) => {
+                        const isTraj = groupBy === "trajectory"
+                        const label = isTraj
+                          ? (g as (typeof tloGroups)[0]).trajectory.name
+                          : (g as (typeof tloGroupsByEq)[0]).eq.name
+                        const color = isTraj
+                          ? (g as (typeof tloGroups)[0]).trajectory.color
+                          : undefined
+                        const key = isTraj
+                          ? (g as (typeof tloGroups)[0]).trajectory.id
+                          : (g as (typeof tloGroupsByEq)[0]).eq.id
+                        return (
+                          <th
+                            key={key}
+                            colSpan={g.tlos.length}
+                            className="border-r border-b bg-card px-3 py-2 text-center"
+                          >
+                            <div className="flex items-center justify-center gap-1.5">
+                              {color && (
+                                <span
+                                  className="size-2 shrink-0 rounded-full"
+                                  style={{ backgroundColor: color }}
+                                />
+                              )}
+                              <span className="text-xs font-semibold">
+                                {label}
+                              </span>
+                            </div>
+                          </th>
+                        )
+                      })}
                     </tr>
                     <tr>
                       {dataColsTlo.map((tlo) => (

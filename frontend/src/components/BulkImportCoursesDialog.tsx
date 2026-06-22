@@ -21,6 +21,10 @@ interface Row {
   start: string
   end: string
   coordinator: string
+  level: string
+  ec: string
+  type: string
+  owner: string
   currentIlo: string
   color: string
 }
@@ -32,6 +36,10 @@ function makeRow(): Row {
     start: "",
     end: "",
     coordinator: "",
+    level: "",
+    ec: "",
+    type: "",
+    owner: "",
     currentIlo: "",
     color: randomColor(),
   }
@@ -94,6 +102,10 @@ const PASTE_COLUMNS: (keyof Omit<Row, "color">)[] = [
   "start",
   "end",
   "coordinator",
+  "level",
+  "ec",
+  "type",
+  "owner",
   "currentIlo",
 ]
 
@@ -164,6 +176,10 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
         start: string | null
         end: string | null
         coordinator: string | null
+        level: number | null
+        ec: number | null
+        type: string
+        owner: string | null
         color: string
         // snake_case key matches what the backend handler reads
         current_ilos: string[]
@@ -179,6 +195,10 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
           start: row.start.trim() || null,
           end: row.end.trim() || null,
           coordinator: row.coordinator.trim() || null,
+          level: row.level.trim() ? Number(row.level.trim()) : null,
+          ec: row.ec.trim() ? Number(row.ec.trim()) : null,
+          type: row.type.trim(),
+          owner: row.owner.trim() || null,
           color: row.color,
           current_ilos: [],
         })
@@ -229,7 +249,8 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
             <span className="block">
               Paste from a spreadsheet — columns map left-to-right:{" "}
               <span className="font-medium text-foreground">
-                Code · Name · Start · End · Coordinator · Course objective
+                Code · Name · Start · End · Coordinator · Level · EC · Type ·
+                Owner · Course objective
               </span>
               . Repeat a code on multiple rows to attach several objectives to
               one course. Start / End format:{" "}
@@ -247,7 +268,7 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
         <div className="max-h-[55vh] overflow-auto rounded border">
           <table
             className="w-full border-collapse text-xs"
-            style={{ minWidth: 960 }}
+            style={{ minWidth: 1300 }}
           >
             <thead className="sticky top-0 z-10">
               <tr className="bg-muted text-muted-foreground">
@@ -280,6 +301,30 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
                   style={{ width: 150 }}
                 >
                   Coordinator
+                </th>
+                <th
+                  className="border-r border-b px-2 py-1.5 text-left font-medium"
+                  style={{ width: 60 }}
+                >
+                  Level
+                </th>
+                <th
+                  className="border-r border-b px-2 py-1.5 text-left font-medium"
+                  style={{ width: 60 }}
+                >
+                  EC
+                </th>
+                <th
+                  className="border-r border-b px-2 py-1.5 text-left font-medium"
+                  style={{ width: 120 }}
+                >
+                  Type
+                </th>
+                <th
+                  className="border-r border-b px-2 py-1.5 text-left font-medium"
+                  style={{ width: 130 }}
+                >
+                  Owner
                 </th>
                 <th className="border-r border-b px-2 py-1.5 text-left font-medium">
                   Course objective
@@ -354,11 +399,47 @@ export function BulkImportCoursesDialog({ open, onOpenChange }: Props) {
                     </td>
                     <td className={cellCls}>
                       <Input
+                        value={row.level}
+                        onChange={(e) => updateRow(i, "level", e.target.value)}
+                        onPaste={(e) => handlePaste(e, i, 5)}
+                        placeholder="3"
+                        className={inputCls}
+                      />
+                    </td>
+                    <td className={cellCls}>
+                      <Input
+                        value={row.ec}
+                        onChange={(e) => updateRow(i, "ec", e.target.value)}
+                        onPaste={(e) => handlePaste(e, i, 6)}
+                        placeholder="6"
+                        className={inputCls}
+                      />
+                    </td>
+                    <td className={cellCls}>
+                      <Input
+                        value={row.type}
+                        onChange={(e) => updateRow(i, "type", e.target.value)}
+                        onPaste={(e) => handlePaste(e, i, 7)}
+                        placeholder="—"
+                        className={inputCls}
+                      />
+                    </td>
+                    <td className={cellCls}>
+                      <Input
+                        value={row.owner}
+                        onChange={(e) => updateRow(i, "owner", e.target.value)}
+                        onPaste={(e) => handlePaste(e, i, 8)}
+                        placeholder="—"
+                        className={inputCls}
+                      />
+                    </td>
+                    <td className={cellCls}>
+                      <Input
                         value={row.currentIlo}
                         onChange={(e) =>
                           updateRow(i, "currentIlo", e.target.value)
                         }
-                        onPaste={(e) => handlePaste(e, i, 5)}
+                        onPaste={(e) => handlePaste(e, i, 9)}
                         placeholder="The student can…"
                         className={inputCls}
                       />

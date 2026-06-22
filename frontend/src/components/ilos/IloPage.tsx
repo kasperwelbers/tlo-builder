@@ -163,7 +163,16 @@ export function IloPage({ courseId }: Props) {
 
   // Header inline-editing state
   const [editingField, setEditingField] = useState<
-    "code" | "name" | "coordinator" | "start" | "end" | "type" | "owner" | null
+    | "code"
+    | "name"
+    | "coordinator"
+    | "start"
+    | "end"
+    | "type"
+    | "owner"
+    | "level"
+    | "ec"
+    | null
   >(null)
   const [editValue, setEditValue] = useState("")
 
@@ -188,7 +197,16 @@ export function IloPage({ courseId }: Props) {
   if (!course) return null
 
   function handleStartEdit(
-    field: "code" | "name" | "coordinator" | "start" | "end" | "type" | "owner",
+    field:
+      | "code"
+      | "name"
+      | "coordinator"
+      | "start"
+      | "end"
+      | "type"
+      | "owner"
+      | "level"
+      | "ec",
     value: string
   ) {
     setEditingField(field)
@@ -213,6 +231,18 @@ export function IloPage({ courseId }: Props) {
       courseType: editingField === "type" ? editValue.trim() : course!.type,
       owner:
         editingField === "owner" ? editValue.trim() || null : course!.owner,
+      level:
+        editingField === "level"
+          ? editValue.trim()
+            ? Number(editValue.trim())
+            : null
+          : course!.level,
+      ec:
+        editingField === "ec"
+          ? editValue.trim()
+            ? Number(editValue.trim())
+            : null
+          : course!.ec,
     })
     setEditingField(null)
   }
@@ -515,6 +545,80 @@ export function IloPage({ courseId }: Props) {
                   onClick={() => handleStartEdit("owner", course.owner || "")}
                 >
                   {course.owner || <span className="italic opacity-50">—</span>}
+                </span>
+              )}
+            </div>
+
+            {/* Level */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="shrink-0 font-medium">Level:</span>
+              {editingField === "level" ? (
+                <Input
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="h-6 w-16 border-0 px-1 text-xs focus-visible:ring-1"
+                  autoFocus
+                  placeholder="e.g. 3"
+                  onBlur={handleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave()
+                    if (e.key === "Escape") setEditingField(null)
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  onClick={() =>
+                    handleStartEdit(
+                      "level",
+                      course.level != null ? String(course.level) : ""
+                    )
+                  }
+                >
+                  {course.level != null ? (
+                    course.level
+                  ) : (
+                    <span className="italic opacity-50">—</span>
+                  )}
+                </span>
+              )}
+            </div>
+
+            {/* EC */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="shrink-0 font-medium">EC:</span>
+              {editingField === "ec" ? (
+                <Input
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="h-6 w-16 border-0 px-1 text-xs focus-visible:ring-1"
+                  autoFocus
+                  placeholder="e.g. 6"
+                  onBlur={handleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave()
+                    if (e.key === "Escape") setEditingField(null)
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  onClick={() =>
+                    handleStartEdit(
+                      "ec",
+                      course.ec != null ? String(course.ec) : ""
+                    )
+                  }
+                >
+                  {course.ec != null ? (
+                    course.ec
+                  ) : (
+                    <span className="italic opacity-50">—</span>
+                  )}
                 </span>
               )}
             </div>
