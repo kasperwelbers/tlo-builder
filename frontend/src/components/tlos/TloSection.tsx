@@ -1,5 +1,11 @@
 import { useState } from "react"
-import { ChevronDown, GripVertical, Plus, Trash2 } from "lucide-react"
+import {
+  ChevronDown,
+  GraduationCap,
+  MessageSquare,
+  Plus,
+  Trash2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BloomSelect } from "@/components/ui/bloom-select"
@@ -15,10 +21,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useDraggable, useDroppable } from "@dnd-kit/core"
-import { CSS } from "@dnd-kit/utilities"
 import { IloItem } from "./IloItem"
 import { CreateIloDialog } from "./CreateIloDialog"
+import { TloEqLinkDialog } from "./TloEqLinkDialog"
 import { useApp } from "@/context/AppContext"
 import { cn } from "@/lib/utils"
 import type { CurrentIlo, Ilo, Tlo } from "@/lib/types"
@@ -27,86 +32,39 @@ interface TloSectionProps {
   tlo: Tlo
   ilos: Ilo[]
   currentIlos: CurrentIlo[]
-  draggingIloId: number | null
   onEdit: () => void
   onDelete: () => void
+  onOpenComments?: (opts: { tloId?: number; iloId?: number }) => void
 }
 
-// ── Draggable ILO row ────────────────────────────────────────────────────────
-function DraggableIloRow({
-  ilo,
-  onDelete,
-}: {
-  ilo: Ilo
-  onDelete: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: ilo.id })
-  const style = transform
-    ? { transform: CSS.Translate.toString(transform) }
-    : undefined
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn("flex items-center", isDragging && "opacity-40")}
-    >
-      <button
-        {...listeners}
-        {...attributes}
-        className="shrink-0 cursor-grab px-1 py-1.5 text-muted-foreground/40 transition-colors hover:text-muted-foreground"
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="size-4" />
-      </button>
-      <div className="min-w-0 flex-1">
-        <IloItem ilo={ilo} onDelete={onDelete} />
-      </div>
-    </div>
-  )
-}
-
-// ── ILO drop zone (the body of a TloSection) ─────────────────────────────────
-function IloDropZone({
-  tloId,
-  children,
-  isEmpty,
-  isTarget,
-}: {
-  tloId: number
-  children: React.ReactNode
-  isEmpty: boolean
-  isTarget: boolean
-}) {
-  const { isOver, setNodeRef } = useDroppable({ id: tloId })
-  const active = isOver && isTarget
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "transition-all",
-        active && "bg-primary/5 ring-2 ring-primary/40 ring-inset",
-        isEmpty && isTarget && "min-h-12"
-      )}
-    >
-      {children}
-    </div>
-  )
-}
+// (IloDropZone removed — drag-and-drop replaced by Move dialog)
 
 export function TloSection({
   tlo,
   ilos,
   currentIlos,
-  draggingIloId,
   onEdit,
   onDelete,
+  onOpenComments,
 }: TloSectionProps) {
-  const { send } = useApp()
+  const { send, state } = useApp()
+  const tloCommentCount = state.comments.filter(
+    (c) =>
+      c.context === "trajectory" &&
+      c.contextId === tlo.trajectoryId &&
+      c.tloId === tlo.id &&
+      !c.iloId &&
+      c.status !== "done"
+  ).length
 
-  const [collapsed, setCollapsed] = useState(false)
+  const linkedEq =
+    tlo.eqId != null
+      ? (state.exitQualifications?.find((e) => e.id === tlo.eqId) ?? null)
+      : null
+
+  const [collapsed, setCollapsed] = useState(true)
   const [createFromCloOpen, setCreateFromCloOpen] = useState(false)
+  const [eqLinkOpen, setEqLinkOpen] = useState(false)
 
   const [editingField, setEditingField] = useState<
     "name" | "description" | null
@@ -132,6 +90,7 @@ export function TloSection({
         description:
           editingField === "description" ? editValue : tlo.description,
         bloomLevel: tlo.bloomLevel,
+        eqId: tlo.eqId ?? null,
       })
     }
     setEditingField(null)
@@ -145,6 +104,7 @@ export function TloSection({
       name: tlo.name,
       description: tlo.description,
       bloomLevel: val || null,
+      eqId: tlo.eqId ?? null,
     })
   }
 
@@ -207,6 +167,35 @@ export function TloSection({
             />
           </div>
 
+          {/* EQ link */}
+          <button
+            className={cn(
+              "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-black/5",
+              linkedEq
+                ? "text-foreground/70"
+                : "text-muted-foreground opacity-0 group-hover:opacity-100"
+            )}
+            onClick={() => setEqLinkOpen(true)}
+            title={
+              linkedEq ? `EQ: ${linkedEq.name}` : "Link to Exit Qualification"
+            }
+          >
+            <GraduationCap className="size-3.5 shrink-0" />
+          </button>
+
+          <button
+            className={cn(
+              "flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 text-muted-foreground transition-colors hover:bg-black/5",
+              tloCommentCount === 0 && "opacity-0 group-hover:opacity-100"
+            )}
+            onClick={() => onOpenComments?.({ tloId: tlo.id })}
+            title="Comments"
+          >
+            <MessageSquare className="size-3.5" />
+            {tloCommentCount > 0 && (
+              <span className="text-xs">{tloCommentCount}</span>
+            )}
+          </button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -265,23 +254,20 @@ export function TloSection({
       </div>
 
       {!collapsed && (
-        <IloDropZone
-          tloId={tlo.id}
-          isEmpty={ilos.length === 0}
-          isTarget={
-            draggingIloId !== null && !ilos.some((i) => i.id === draggingIloId)
-          }
-        >
+        <div>
           {/* ILOs */}
           {ilos.length > 0 && (
             <>
               <Separator />
               <div className="py-1">
                 {ilos.map((ilo) => (
-                  <DraggableIloRow
+                  <IloItem
                     key={ilo.id}
                     ilo={ilo}
                     onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
+                    onOpenComments={() =>
+                      onOpenComments?.({ tloId: tlo.id, iloId: ilo.id })
+                    }
                   />
                 ))}
               </div>
@@ -315,7 +301,7 @@ export function TloSection({
               objectives
             </Button>
           </div>
-        </IloDropZone>
+        </div>
       )}
 
       {/* Create ILO from CLO */}
@@ -324,6 +310,11 @@ export function TloSection({
         onOpenChange={setCreateFromCloOpen}
         tlo={tlo}
         currentIlos={currentIlos}
+      />
+      <TloEqLinkDialog
+        open={eqLinkOpen}
+        onOpenChange={setEqLinkOpen}
+        tlo={tlo}
       />
     </div>
   )

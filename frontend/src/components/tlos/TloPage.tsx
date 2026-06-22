@@ -14,10 +14,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { DndContext, DragOverlay, type DragEndEvent } from "@dnd-kit/core"
 import { TloSection } from "./TloSection"
 import { TloFormDialog } from "@/components/tlos/TloFormDialog"
-import { CommentsDialog } from "@/components/CommentsDialog"
+import { CommentsPanel } from "@/components/CommentsPanel"
 import { useApp } from "@/context/AppContext"
 import { useHelp } from "@/context/HelpContext"
 import type { Tlo } from "@/lib/types"
@@ -56,25 +55,24 @@ export function TrajectoryPage({ trajectoryId }: Props) {
   const [editValue, setEditValue] = useState("")
   const [addTloOpen, setAddTloOpen] = useState(false)
   const [editTlo, setEditTlo] = useState<Tlo | null>(null)
-  const [activeIloId, setActiveIloId] = useState<number | null>(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [commentsFocusTloId, setCommentsFocusTloId] = useState<number | null>(
+    null
+  )
+  const [commentsFocusIloId, setCommentsFocusIloId] = useState<number | null>(
+    null
+  )
+
+  function openComments(tloId?: number, iloId?: number) {
+    setCommentsFocusTloId(tloId ?? null)
+    setCommentsFocusIloId(iloId ?? null)
+    setCommentsOpen(true)
+  }
 
   const iloById = useMemo(
     () => new Map(state.ilos.map((i) => [i.id, i])),
     [state.ilos]
   )
-  const activeIlo = activeIloId != null ? iloById.get(activeIloId) : null
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    setActiveIloId(null)
-    if (!over) return
-    const iloId = active.id as number
-    const targetTloId = over.id as number
-    const ilo = iloById.get(iloId)
-    if (!ilo || ilo.tloId === targetTloId) return
-    send({ type: "tlo_ilo_mapping:add", tloId: targetTloId, iloId })
-  }
 
   if (!trajectory) return null
 
@@ -113,14 +111,17 @@ export function TrajectoryPage({ trajectoryId }: Props) {
         {/* Comments button */}
         {(() => {
           const count = state.comments.filter(
-            (c) => c.context === "trajectory" && c.contextId === trajectory.id
+            (c) =>
+              c.context === "trajectory" &&
+              c.contextId === trajectory.id &&
+              c.status !== "done"
           ).length
           return (
             <Button
               variant="ghost"
               size="sm"
               className="gap-1.5 text-muted-foreground hover:text-foreground"
-              onClick={() => setCommentsOpen(true)}
+              onClick={() => openComments()}
             >
               <MessageSquare className="size-4" />
               {count > 0 && <span className="text-xs">{count}</span>}
@@ -236,74 +237,58 @@ export function TrajectoryPage({ trajectoryId }: Props) {
       </div>
 
       {/* TLO list */}
-      <DndContext
-        onDragStart={({ active }) => setActiveIloId(active.id as number)}
-        onDragEnd={handleDragEnd}
-        onDragCancel={() => setActiveIloId(null)}
-      >
-        <div className="space-y-4 pt-6">
-          {tlosForTrajectory.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-12 text-center">
-              <p className="text-muted-foreground">
-                No TLOs yet in this trajectory.
-              </p>
+      <div className="space-y-4 pt-6">
+        {tlosForTrajectory.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-12 text-center">
+            <p className="text-muted-foreground">
+              No TLOs yet in this trajectory.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => {
+                setEditTlo(null)
+                setAddTloOpen(true)
+              }}
+            >
+              <Plus className="mr-1.5 size-4" /> Add your first TLO
+            </Button>
+          </div>
+        ) : (
+          <>
+            {tlosForTrajectory.map((tlo) => (
+              <TloSection
+                key={tlo.id}
+                tlo={tlo}
+                ilos={state.ilos
+                  .filter((i) => i.tloId === tlo.id)
+                  .sort(
+                    (a, b) =>
+                      bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel)
+                  )}
+                currentIlos={state.currentIlos}
+                onEdit={() => {
+                  setEditTlo(tlo)
+                  setAddTloOpen(true)
+                }}
+                onDelete={() => send({ type: "tlo:delete", id: tlo.id })}
+                onOpenComments={(opts) => openComments(opts.tloId, opts.iloId)}
+              />
+            ))}
+            <div className="flex justify-end">
               <Button
-                variant="outline"
-                className="mt-4"
                 onClick={() => {
                   setEditTlo(null)
                   setAddTloOpen(true)
                 }}
+                size="sm"
               >
-                <Plus className="mr-1.5 size-4" /> Add your first TLO
+                <Plus className="mr-1.5 size-4" /> Add TLO
               </Button>
             </div>
-          ) : (
-            <>
-              {tlosForTrajectory.map((tlo) => (
-                <TloSection
-                  key={tlo.id}
-                  tlo={tlo}
-                  ilos={state.ilos
-                    .filter((i) => i.tloId === tlo.id)
-                    .sort(
-                      (a, b) =>
-                        bloomSortKey(a.bloomLevel) - bloomSortKey(b.bloomLevel)
-                    )}
-                  currentIlos={state.currentIlos}
-                  draggingIloId={activeIloId}
-                  onEdit={() => {
-                    setEditTlo(tlo)
-                    setAddTloOpen(true)
-                  }}
-                  onDelete={() => send({ type: "tlo:delete", id: tlo.id })}
-                />
-              ))}
-              <div className="flex justify-end">
-                <Button
-                  onClick={() => {
-                    setEditTlo(null)
-                    setAddTloOpen(true)
-                  }}
-                  size="sm"
-                >
-                  <Plus className="mr-1.5 size-4" /> Add TLO
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-
-        <DragOverlay>
-          {activeIlo && (
-            <div className="max-w-xs cursor-grabbing truncate rounded-md border bg-background px-3 py-2 text-sm font-medium opacity-90 shadow-lg">
-              {activeIlo.description || (
-                <span className="italic opacity-50">No description</span>
-              )}
-            </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+          </>
+        )}
+      </div>
 
       {/* Add / edit TLO dialog */}
       <TloFormDialog
@@ -324,11 +309,13 @@ export function TrajectoryPage({ trajectoryId }: Props) {
           setEditTlo(null)
         }}
       />
-      <CommentsDialog
+      <CommentsPanel
         open={commentsOpen}
-        onOpenChange={setCommentsOpen}
+        onClose={() => setCommentsOpen(false)}
         context="trajectory"
         contextId={trajectory.id}
+        focusTloId={commentsFocusTloId}
+        focusIloId={commentsFocusIloId}
       />
     </div>
   )

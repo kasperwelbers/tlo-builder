@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Trash2, Link2 } from "lucide-react"
+import { Trash2, Link2, MessageSquare, Move } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { BloomSelect } from "@/components/ui/bloom-select"
@@ -21,26 +21,31 @@ import {
 } from "@/components/ui/tooltip"
 import { OrderBadge } from "@/components/ui/order-badge"
 import { IloLinkDialog } from "./IloLinkDialog"
+import { IloMoveTloDialog } from "./IloMoveTloDialog"
 import { useApp } from "@/context/AppContext"
 import { useNav } from "@/context/NavigationContext"
+import { cn } from "@/lib/utils"
 import type { Ilo } from "@/lib/types"
 
 interface IloItemProps {
   ilo: Ilo
   onDelete: () => void
   variant?: "trajectory" | "course"
+  onOpenComments?: () => void
 }
 
 export function IloItem({
   ilo,
   onDelete,
   variant = "trajectory",
+  onOpenComments,
 }: IloItemProps) {
   const { state, send } = useApp()
   const { navigateTo } = useNav()
   const [editingField, setEditingField] = useState<"description" | null>(null)
   const [editValue, setEditValue] = useState("")
   const [linkOpen, setLinkOpen] = useState(false)
+  const [moveOpen, setMoveOpen] = useState(false)
 
   const courseById = new Map(state.courses.map((c) => [c.id, c]))
   const sortedCourses = [...state.courses].sort((a, b) =>
@@ -49,6 +54,9 @@ export function IloItem({
   const courseOrderNum = new Map(sortedCourses.map((c, i) => [c.id, i + 1]))
   const currentIloById = new Map(state.currentIlos.map((c) => [c.id, c]))
   const mappings = state.iloCurrentIloMappings.filter((m) => m.iloId === ilo.id)
+  const iloCommentCount = state.comments.filter(
+    (c) => c.iloId === ilo.id && c.status !== "done"
+  ).length
 
   const tloById = new Map(state.tlos.map((t) => [t.id, t]))
   const trajectoryById = new Map(state.trajectories.map((t) => [t.id, t]))
@@ -160,6 +168,37 @@ export function IloItem({
             </AlertDialogContent>
           </AlertDialog>
 
+          {/* Move button — trajectory only */}
+          {variant === "trajectory" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  onClick={() => setMoveOpen(true)}
+                >
+                  <Move className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Move to another TLO</TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Comment button */}
+          <button
+            className={cn(
+              "flex items-center gap-0.5 rounded px-1 py-0.5 text-muted-foreground transition-colors hover:bg-muted",
+              iloCommentCount === 0 && "opacity-0 group-hover:opacity-100"
+            )}
+            onClick={() => onOpenComments?.()}
+            title="Comments"
+          >
+            <MessageSquare className="size-3" />
+            {iloCommentCount > 0 && (
+              <span className="text-xs leading-none">{iloCommentCount}</span>
+            )}
+          </button>
           {/* Badge: TLO (circle) on course page, course (square) on trajectory page */}
           {variant === "course"
             ? (() => {
@@ -255,6 +294,15 @@ export function IloItem({
           )}
         </div>
       </div>
+
+      {/* Move dialog — trajectory only */}
+      {variant === "trajectory" && (
+        <IloMoveTloDialog
+          open={moveOpen}
+          onOpenChange={setMoveOpen}
+          ilo={ilo}
+        />
+      )}
 
       {/* Link dialog — workspace only */}
       {variant === "trajectory" && (

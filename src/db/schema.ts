@@ -43,6 +43,8 @@ export const courses = sqliteTable(
     coordinator: text("coordinator"),
     start: text("start"),
     end: text("end"),
+    type: text("type").notNull().default(""),
+    owner: text("owner"),
   },
   (t) => [uniqueIndex("courses_project_code_idx").on(t.projectId, t.code)]
 )
@@ -58,6 +60,7 @@ export const tlos = sqliteTable("tlos", {
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
   bloomLevel: text("bloom_level"),
+  eqId: integer("eq_id"),
 })
 
 export const ilos = sqliteTable("ilos", {
@@ -121,6 +124,7 @@ export const projectRelations = relations(projects, ({ many }) => ({
   ilos: many(ilos),
   currentIlos: many(currentIlos),
   comments: many(comments),
+  exitQualifications: many(exitQualifications),
 }))
 export const trajectoryRelations = relations(trajectories, ({ one, many }) => ({
   project: one(projects, {
@@ -146,6 +150,10 @@ export const tloRelations = relations(tlos, ({ one, many }) => ({
     references: [trajectories.id],
   }),
   iloMappings: many(tloIloMappings),
+  exitQualification: one(exitQualifications, {
+    fields: [tlos.eqId],
+    references: [exitQualifications.id],
+  }),
 }))
 export const iloRelations = relations(ilos, ({ one, many }) => ({
   project: one(projects, {
@@ -242,6 +250,10 @@ export const comments = sqliteTable("comments", {
   deleted: integer("deleted", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at"),
+  parentId: integer("parent_id"),
+  status: text("status").notNull().default("open"),
+  tloId: integer("tlo_id").references(() => tlos.id),
+  iloId: integer("ilo_id").references(() => ilos.id),
 })
 
 export const commentRelations = relations(comments, ({ one }) => ({
@@ -249,4 +261,26 @@ export const commentRelations = relations(comments, ({ one }) => ({
     fields: [comments.projectId],
     references: [projects.id],
   }),
+  tlo: one(tlos, { fields: [comments.tloId], references: [tlos.id] }),
+  ilo: one(ilos, { fields: [comments.iloId], references: [ilos.id] }),
 }))
+
+export const exitQualifications = sqliteTable("exit_qualifications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: text("project_id")
+    .references(() => projects.id)
+    .notNull(),
+  name: text("name").notNull().default(""),
+  description: text("description").notNull().default(""),
+})
+
+export const exitQualificationRelations = relations(
+  exitQualifications,
+  ({ one, many }) => ({
+    project: one(projects, {
+      fields: [exitQualifications.projectId],
+      references: [projects.id],
+    }),
+    tlos: many(tlos),
+  })
+)

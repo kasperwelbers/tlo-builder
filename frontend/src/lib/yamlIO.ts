@@ -11,6 +11,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
     iloCurrentIloMappings,
     trajectories,
     courses,
+    comments,
   } = state
   const tloIloMappings = ilos
     .filter((i) => i.tloId !== null)
@@ -89,8 +90,62 @@ export function exportToYaml(state: AppState, projectName: string): void {
       if (c.coordinator) entry.coordinator = c.coordinator
       if (c.start) entry.start = c.start
       if (c.end) entry.end = c.end
+      if (c.type) entry.type = c.type
+      if (c.owner) entry.owner = c.owner
       return entry
     })
+
+  // ── Comments ──────────────────────────────────────────────────────────────
+  const trajectoryNameById = new Map(trajectories.map((t) => [t.id, t.name]))
+  const tloNameById = new Map(tlos.map((t) => [t.id, t.name]))
+  const iloDescById = new Map(ilos.map((i) => [i.id, i.description]))
+  const courseCodeById = new Map(courses.map((c) => [c.id, c.code]))
+
+  // Build a map from parent comment id to its replies
+  const repliesByParentId = new Map<number, typeof comments>()
+  for (const c of comments) {
+    if (c.parentId != null && !c.deleted) {
+      const arr = repliesByParentId.get(c.parentId) ?? []
+      arr.push(c)
+      repliesByParentId.set(c.parentId, arr)
+    }
+  }
+
+  const commentsOutput = comments
+    .filter((c) => c.parentId === null && !c.deleted)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((c) => {
+      const entry: Record<string, unknown> = {
+        user: c.userEmail,
+        text: c.comment,
+        status: c.status ?? "open",
+        created_at: new Date(c.createdAt).toISOString(),
+      }
+
+      if (c.context === "trajectory") {
+        entry.context = "trajectory"
+        entry.trajectory = trajectoryNameById.get(c.contextId) ?? null
+        if (c.tloId != null) entry.tlo = tloNameById.get(c.tloId) ?? null
+        if (c.iloId != null) entry.ilo = iloDescById.get(c.iloId) ?? null
+      } else {
+        entry.context = "course"
+        entry.course = courseCodeById.get(c.contextId) ?? null
+        if (c.iloId != null) entry.ilo = iloDescById.get(c.iloId) ?? null
+      }
+
+      const replies = (repliesByParentId.get(c.id) ?? [])
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((r) => ({
+          user: r.userEmail,
+          text: r.comment,
+          status: r.status ?? "open",
+          created_at: new Date(r.createdAt).toISOString(),
+        }))
+      if (replies.length > 0) entry.replies = replies
+
+      return entry
+    })
+    .filter((e) => e.trajectory != null || e.course != null)
 
   const doc = {
     exported: new Date().toISOString(),
@@ -101,6 +156,7 @@ export function exportToYaml(state: AppState, projectName: string): void {
       bloom_level: co.bloomLevel ?? null,
     })),
     trajectories: trajectoryOutput,
+    comments: commentsOutput,
   }
 
   const yamlStr = yaml.dump(doc, { lineWidth: 120, noRefs: true })

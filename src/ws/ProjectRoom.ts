@@ -12,6 +12,7 @@ import {
   courses,
   tloIloMappings,
   comments,
+  exitQualifications,
   users,
 } from "../db/schema"
 import { handleMessage, type SyncTable } from "./handlers"
@@ -149,6 +150,11 @@ export class ProjectRoom extends DurableObject<Env> {
           .select()
           .from(comments)
           .where(eq(comments.projectId, projectId))
+      case "exit_qualifications":
+        return db
+          .select()
+          .from(exitQualifications)
+          .where(eq(exitQualifications.projectId, projectId))
     }
   }
 
@@ -169,6 +175,7 @@ export class ProjectRoom extends DurableObject<Env> {
       allCurrentIlos,
       allIloCurrentIloMappings,
       allComments,
+      allExitQualifications,
     ] = await Promise.all([
       db
         .select()
@@ -193,6 +200,10 @@ export class ProjectRoom extends DurableObject<Env> {
         .from(iloCurrentIloMappings)
         .where(eq(iloCurrentIloMappings.projectId, projectId)),
       db.select().from(comments).where(eq(comments.projectId, projectId)),
+      db
+        .select()
+        .from(exitQualifications)
+        .where(eq(exitQualifications.projectId, projectId)),
     ])
 
     return {
@@ -203,6 +214,7 @@ export class ProjectRoom extends DurableObject<Env> {
       currentIlos: allCurrentIlos,
       iloCurrentIloMappings: allIloCurrentIloMappings,
       comments: allComments,
+      exitQualifications: allExitQualifications,
     }
   }
 }

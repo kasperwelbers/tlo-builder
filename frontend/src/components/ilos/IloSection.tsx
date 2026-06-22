@@ -70,10 +70,17 @@ interface Props {
   currentIlo: CurrentIlo
   ilos: Ilo[]
   onDelete: () => void
+  onOpenComments?: (iloId: number) => void
 }
 
 // Internal draggable wrapper for ILO rows inside a Current ILO section
-function DraggableIlo({ ilo }: { ilo: Ilo }) {
+function DraggableIlo({
+  ilo,
+  onOpenComments,
+}: {
+  ilo: Ilo
+  onOpenComments?: () => void
+}) {
   const { send } = useApp()
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: ilo.id })
@@ -101,13 +108,19 @@ function DraggableIlo({ ilo }: { ilo: Ilo }) {
           ilo={ilo}
           variant="course"
           onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
+          onOpenComments={onOpenComments}
         />
       </div>
     </div>
   )
 }
 
-export function IloSection({ currentIlo, ilos, onDelete }: Props) {
+export function IloSection({
+  currentIlo,
+  ilos,
+  onDelete,
+  onOpenComments,
+}: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: currentIlo.id })
   const { send, state } = useApp()
 
@@ -205,7 +218,13 @@ export function IloSection({ currentIlo, ilos, onDelete }: Props) {
             <Separator />
             <div className="py-1">
               {ilos.map((ilo) => (
-                <DraggableIlo key={ilo.id} ilo={ilo} />
+                <DraggableIlo
+                  key={ilo.id}
+                  ilo={ilo}
+                  onOpenComments={
+                    onOpenComments ? () => onOpenComments(ilo.id) : undefined
+                  }
+                />
               ))}
             </div>
           </>
@@ -306,6 +325,17 @@ export function IloSection({ currentIlo, ilos, onDelete }: Props) {
           </div>
 
           <DialogFooter>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="mr-auto"
+              onClick={() => {
+                setEditOpen(false)
+                onDelete()
+              }}
+            >
+              Delete
+            </Button>
             <Button
               variant="outline"
               size="sm"

@@ -9,6 +9,7 @@ const INITIAL_STATE: AppState = {
   iloCurrentIloMappings: [],
   courses: [],
   comments: [],
+  exitQualifications: [],
 }
 
 async function fetchTicket(projectId: string): Promise<string | null> {
@@ -85,6 +86,7 @@ export function useWebSocket(projectId: string) {
                 iloCurrentIloMappings: d.iloCurrentIloMappings ?? [],
                 courses: d.courses ?? [],
                 comments: d.comments ?? [],
+                exitQualifications: d.exitQualifications ?? [],
               })
               setReady(true)
               break
@@ -124,6 +126,12 @@ export function useWebSocket(projectId: string) {
               setState((s) => ({
                 ...s,
                 comments: msg.data as AppState["comments"],
+              }))
+              break
+            case "sync:exit_qualifications":
+              setState((s) => ({
+                ...s,
+                exitQualifications: msg.data as AppState["exitQualifications"],
               }))
               break
             case "sync:error":

@@ -8,6 +8,7 @@ import type { Page } from "@/components/layout/AppShell"
 import { TrajectoryPage } from "@/components/tlos/TloPage"
 import { IloPage } from "@/components/ilos/IloPage"
 import { OverviewPage } from "@/components/overview/OverviewPage"
+import { ExitQualificationsPage } from "@/components/eqs/ExitQualificationsPage"
 import { LandingPage } from "@/components/LandingPage"
 import { LoginPage } from "@/components/auth/LoginPage"
 import { UserMenu } from "@/components/UserMenu"
@@ -95,6 +96,7 @@ function Inner({ projectId, projectName, onGoHome, onRename }: InnerProps) {
         )}
         {page?.type === "course" && <IloPage courseId={page.id} />}
         {page?.type === "overview" && <OverviewPage />}
+        {page?.type === "exit_qualifications" && <ExitQualificationsPage />}
         {page === null && (
           <div className="flex h-full items-center justify-center text-muted-foreground">
             <p>

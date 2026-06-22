@@ -5,6 +5,7 @@ export interface Tlo {
   name: string
   description: string
   bloomLevel: string | null
+  eqId: number | null
 }
 export interface Ilo {
   id: number
@@ -34,6 +35,12 @@ export interface Trajectory {
   color: string
   coordinator: string | null
 }
+export interface ExitQualification {
+  id: number
+  projectId: string
+  name: string
+  description: string
+}
 export interface Comment {
   id: number
   projectId: string
@@ -44,6 +51,10 @@ export interface Comment {
   deleted: boolean
   createdAt: number // unix ms
   updatedAt: number | null
+  parentId: number | null
+  status: "open" | "done"
+  tloId: number | null
+  iloId: number | null
 }
 export interface Course {
   id: number
@@ -54,6 +65,8 @@ export interface Course {
   coordinator: string | null
   start: string | null
   end: string | null
+  type: string
+  owner: string | null
 }
 export interface AppState {
   trajectories: Trajectory[]
@@ -63,4 +76,5 @@ export interface AppState {
   iloCurrentIloMappings: IloCurrentIloMapping[]
   courses: Course[]
   comments: Comment[]
+  exitQualifications: ExitQualification[]
 }

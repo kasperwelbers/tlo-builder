@@ -8,6 +8,7 @@ import {
   tloIloMappings,
   iloCurrentIloMappings,
   comments,
+  exitQualifications,
   users,
 } from "../db/schema"
 import { and, eq, inArray } from "drizzle-orm"
@@ -20,6 +21,7 @@ export type SyncTable =
   | "current_ilos"
   | "ilo_current_ilo_mappings"
   | "comments"
+  | "exit_qualifications"
 
 // -- Trajectories --------------------------------------------------------------
 
@@ -103,6 +105,7 @@ async function updateTlo(db: DB, data: any) {
       name: data.name,
       description: data.description,
       bloomLevel: data.bloomLevel ?? null,
+      eqId: data.eqId ?? null,
     })
     .where(eq(tlos.id, data.id))
 }
@@ -153,6 +156,8 @@ async function createCourse(db: DB, data: any) {
       coordinator: data.coordinator ?? null,
       start: data.start ?? null,
       end: data.end ?? null,
+      type: data.courseType ?? data.type ?? "",
+      owner: data.owner ?? null,
     })
     .onConflictDoNothing()
 }
@@ -167,6 +172,8 @@ async function updateCourse(db: DB, data: any) {
       coordinator: data.coordinator ?? null,
       start: data.start ?? null,
       end: data.end ?? null,
+      type: data.courseType ?? data.type ?? "",
+      owner: data.owner ?? null,
     })
     .where(
       and(eq(courses.id, data.courseId), eq(courses.projectId, data.projectId))
@@ -299,42 +306,79 @@ async function deleteIloCurrentIloMapping(db: DB, data: any) {
 // -- Comments ----------------------------------------------------------------
 
 async function createComment(db: DB, data: any): Promise<void> {
-  // Look up the user's email from their userId
   const [userRow] = await db
     .select({ email: users.email })
     .from(users)
     .where(eq(users.id, data.userId))
   const userEmail = userRow?.email ?? "unknown"
 
+  // When replying, inherit tloId/iloId from the parent comment
+  let tloId = data.tloId ?? null
+  let iloId = data.iloId ?? null
+  if (data.parentId) {
+    const [parent] = await db
+      .select({ tloId: comments.tloId, iloId: comments.iloId })
+      .from(comments)
+      .where(eq(comments.id, data.parentId))
+    if (parent) {
+      tloId = parent.tloId
+      iloId = parent.iloId
+    }
+  }
+
   await db.insert(comments).values({
     projectId: data.projectId,
     userEmail,
-    context: data.context, // 'trajectory' | 'course'
-    contextId: data.contextId, // the trajectory or course id
+    context: data.context,
+    contextId: data.contextId,
     comment: data.comment ?? "",
     deleted: false,
     createdAt: Date.now(),
     updatedAt: null,
+    parentId: data.parentId ?? null,
+    status: "open",
+    tloId,
+    iloId,
   })
 }
 
 async function updateComment(db: DB, data: any): Promise<void> {
-  // Only the comment's author may edit
   const [userRow] = await db
     .select({ email: users.email })
     .from(users)
     .where(eq(users.id, data.userId))
   const userEmail = userRow?.email ?? ""
 
+  const updateObj: Record<string, unknown> = { updatedAt: Date.now() }
+  if (data.comment !== undefined) updateObj.comment = data.comment
+  if (data.status !== undefined) updateObj.status = data.status
+
   await db
     .update(comments)
-    .set({ comment: data.comment, updatedAt: Date.now() })
+    .set(updateObj as any)
     .where(
       and(
         eq(comments.id, data.id),
         eq(comments.userEmail, userEmail),
         eq(comments.projectId, data.projectId)
       )
+    )
+}
+
+async function toggleCommentDone(db: DB, data: any): Promise<void> {
+  // Any project member may toggle the done status
+  const [row] = await db
+    .select({ status: comments.status })
+    .from(comments)
+    .where(
+      and(eq(comments.id, data.id), eq(comments.projectId, data.projectId))
+    )
+  const newStatus = row?.status === "done" ? "open" : "done"
+  await db
+    .update(comments)
+    .set({ status: newStatus, updatedAt: Date.now() })
+    .where(
+      and(eq(comments.id, data.id), eq(comments.projectId, data.projectId))
     )
 }
 
@@ -353,6 +397,44 @@ async function deleteComment(db: DB, data: any): Promise<void> {
         eq(comments.id, data.id),
         eq(comments.userEmail, userEmail),
         eq(comments.projectId, data.projectId)
+      )
+    )
+}
+
+// -- Exit Qualifications -------------------------------------------------------
+
+async function createEq(db: DB, data: any): Promise<void> {
+  await db.insert(exitQualifications).values({
+    projectId: data.projectId,
+    name: data.name ?? "",
+    description: data.description ?? "",
+  })
+}
+
+async function updateEq(db: DB, data: any): Promise<void> {
+  await db
+    .update(exitQualifications)
+    .set({ name: data.name, description: data.description })
+    .where(
+      and(
+        eq(exitQualifications.id, data.id),
+        eq(exitQualifications.projectId, data.projectId)
+      )
+    )
+}
+
+async function deleteEq(db: DB, data: any): Promise<void> {
+  // Unlink all TLOs that reference this EQ before deleting
+  await db
+    .update(tlos)
+    .set({ eqId: null })
+    .where(and(eq(tlos.eqId, data.id), eq(tlos.projectId, data.projectId)))
+  await db
+    .delete(exitQualifications)
+    .where(
+      and(
+        eq(exitQualifications.id, data.id),
+        eq(exitQualifications.projectId, data.projectId)
       )
     )
 }
@@ -448,6 +530,19 @@ export async function handleMessage(db: DB, data: any): Promise<SyncTable[]> {
     case "comment:delete":
       await deleteComment(db, data)
       return ["comments"]
+    case "comment:toggle_done":
+      await toggleCommentDone(db, data)
+      return ["comments"]
+
+    case "eq:create":
+      await createEq(db, data)
+      return ["exit_qualifications"]
+    case "eq:update":
+      await updateEq(db, data)
+      return ["exit_qualifications"]
+    case "eq:delete":
+      await deleteEq(db, data)
+      return ["exit_qualifications", "tlos"]
 
     default:
       console.warn("Unknown message type:", data.type)
@@ -521,6 +616,8 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
       coordinator?: string | null
       start?: string | null
       end?: string | null
+      type?: string
+      owner?: string | null
       current_ilos?: string[]
       clos?: string[]
     }>
@@ -541,6 +638,8 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
         coordinator: courseData.coordinator ?? null,
         start: courseData.start ?? null,
         end: courseData.end ?? null,
+        type: courseData.type ?? "",
+        owner: courseData.owner ?? null,
       })
       .onConflictDoUpdate({
         target: [courses.projectId, courses.code],
@@ -550,6 +649,8 @@ async function bulkCreateCourses(db: DB, data: any): Promise<SyncTable[]> {
           coordinator: courseData.coordinator ?? null,
           start: courseData.start ?? null,
           end: courseData.end ?? null,
+          type: courseData.type ?? "",
+          owner: courseData.owner ?? null,
         },
       })
 
@@ -594,6 +695,7 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
   const payload = data.data as any
 
   // Full overwrite: delete all existing content for this project in dependency order
+  await db.delete(comments).where(eq(comments.projectId, projectId))
   await db
     .delete(iloCurrentIloMappings)
     .where(eq(iloCurrentIloMappings.projectId, projectId))
@@ -635,7 +737,9 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     color = "",
     coordinator?: string,
     start?: string,
-    end?: string
+    end?: string,
+    type = "",
+    owner?: string
   ): Promise<number> {
     await db
       .insert(courses)
@@ -647,6 +751,8 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
         coordinator: coordinator ?? null,
         start: start ?? null,
         end: end ?? null,
+        type: type ?? "",
+        owner: owner ?? null,
       })
       .onConflictDoNothing()
     const [row] = await db
@@ -655,6 +761,10 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
       .where(and(eq(courses.projectId, projectId), eq(courses.code, code)))
     return row.id
   }
+
+  const trajectoryNameToId = new Map<string, number>()
+  const tloKeyToId = new Map<string, number>() // key: "trajName::tloName"
+  const iloDescToId = new Map<string, number>() // key: ilo description
 
   // 1. Upsert courses from the dedicated courses section (preserves color, coordinator, etc.)
   const courseCodeToId = new Map<string, number>()
@@ -673,7 +783,9 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
         courseData.color,
         courseData.coordinator,
         courseData.start,
-        courseData.end
+        courseData.end,
+        courseData.type,
+        courseData.owner
       )
     )
   }
@@ -713,6 +825,7 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
       traj.color,
       traj.coordinator
     )
+    trajectoryNameToId.set(traj.name, trajectoryId)
     for (const tloData of traj.tlos ?? []) {
       const [newTlo] = await db
         .insert(tlos)
@@ -724,6 +837,7 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
           bloomLevel: tloData.bloom_level ?? null,
         })
         .returning()
+      tloKeyToId.set(`${traj.name}::${tloData.name}`, newTlo.id)
       for (const iloData of tloData.ilos ?? []) {
         const [newIlo] = await db
           .insert(ilos)
@@ -733,6 +847,7 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
             bloomLevel: iloData.bloom_level ?? null,
           })
           .returning()
+        iloDescToId.set(iloData.description ?? "", newIlo.id)
         await db
           .insert(tloIloMappings)
           .values({ tloId: newTlo.id, iloId: newIlo.id, projectId })
@@ -753,6 +868,74 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     }
   }
 
+  // Import comments
+  for (const commentData of payload.comments ?? []) {
+    let contextId: number | undefined
+    let tloId: number | null = null
+    let iloId: number | null = null
+
+    if (commentData.context === "trajectory") {
+      contextId = trajectoryNameToId.get(commentData.trajectory)
+      if (contextId === undefined) continue
+      if (commentData.tlo) {
+        tloId =
+          tloKeyToId.get(`${commentData.trajectory}::${commentData.tlo}`) ??
+          null
+      }
+    } else if (commentData.context === "course") {
+      contextId = courseCodeToId.get(commentData.course)
+      if (contextId === undefined) continue
+    } else {
+      continue
+    }
+
+    if (commentData.ilo) {
+      iloId = iloDescToId.get(commentData.ilo) ?? null
+    }
+
+    const createdAt = commentData.created_at
+      ? new Date(commentData.created_at).getTime()
+      : Date.now()
+
+    const [inserted] = await db
+      .insert(comments)
+      .values({
+        projectId,
+        userEmail: commentData.user ?? "unknown",
+        context: commentData.context,
+        contextId,
+        comment: commentData.text ?? "",
+        deleted: false,
+        createdAt,
+        updatedAt: null,
+        parentId: null,
+        status: commentData.status ?? "open",
+        tloId,
+        iloId,
+      })
+      .returning()
+
+    for (const replyData of commentData.replies ?? []) {
+      const replyCreatedAt = replyData.created_at
+        ? new Date(replyData.created_at).getTime()
+        : Date.now()
+      await db.insert(comments).values({
+        projectId,
+        userEmail: replyData.user ?? "unknown",
+        context: commentData.context,
+        contextId,
+        comment: replyData.text ?? "",
+        deleted: false,
+        createdAt: replyCreatedAt,
+        updatedAt: null,
+        parentId: inserted.id,
+        status: replyData.status ?? "open",
+        tloId,
+        iloId,
+      })
+    }
+  }
+
   return [
     "trajectories",
     "courses",
@@ -760,5 +943,6 @@ async function importAll(db: DB, data: any): Promise<SyncTable[]> {
     "ilos",
     "current_ilos",
     "ilo_current_ilo_mappings",
+    "comments",
   ]
 }

@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   ArrowLeft,
   Settings,
+  GraduationCap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,6 +43,7 @@ export type Page =
   | { type: "trajectory"; id: number }
   | { type: "course"; id: number }
   | { type: "overview" }
+  | { type: "exit_qualifications" }
 
 interface AppShellProps {
   currentPage: Page | null
@@ -178,7 +180,7 @@ export function AppShell({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         <aside
           className={cn(
             "flex shrink-0 flex-col overflow-hidden border-r bg-card transition-[width] duration-200",
@@ -313,6 +315,47 @@ export function AppShell({
             ) : (
               <Separator className="my-2" />
             )}
+
+            {/* Exit Qualifications */}
+            <div className={cn("pb-1", collapsed ? "px-1.5" : "px-3")}>
+              {collapsed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() =>
+                        handleNavigate({ type: "exit_qualifications" })
+                      }
+                      className={cn(
+                        "flex w-full items-center justify-center rounded-md py-2 transition-colors",
+                        currentPage?.type === "exit_qualifications"
+                          ? "bg-black text-white"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <GraduationCap className="size-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    Exit Qualifications
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <button
+                  onClick={() =>
+                    handleNavigate({ type: "exit_qualifications" })
+                  }
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                    currentPage?.type === "exit_qualifications"
+                      ? "bg-black font-medium text-white"
+                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <GraduationCap className="size-3.5 shrink-0" />
+                  Exit Qualifications
+                </button>
+              )}
+            </div>
 
             {/* Trajectories */}
             <div
@@ -499,12 +542,14 @@ export function AppShell({
           </nav>
 
           {/* Bottom: Import / Export */}
-          <div className={cn("border-t", collapsed ? "p-1.5" : "p-3")}>
+          <div className={cn("shrink-0 border-t", collapsed ? "p-1.5" : "p-3")}>
             <YamlActions collapsed={collapsed} projectName={projectName} />
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto p-6 pt-8">{children}</main>
+        <main className="min-w-0 flex-1 overflow-auto p-6 pt-8">
+          {children}
+        </main>
 
         {/* Add Trajectory Dialog */}
         <Dialog open={addTrajOpen} onOpenChange={setAddTrajOpen}>

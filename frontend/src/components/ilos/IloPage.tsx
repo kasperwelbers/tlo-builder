@@ -30,7 +30,7 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { IloSection } from "./IloSection"
 import { CurrentIloFormDialog } from "./CurrentIloFormDialog"
-import { CommentsDialog } from "@/components/CommentsDialog"
+import { CommentsPanel } from "@/components/CommentsPanel"
 import { IloItem } from "@/components/tlos/IloItem"
 import { useApp } from "@/context/AppContext"
 import { useHelp } from "@/context/HelpContext"
@@ -43,7 +43,13 @@ interface Props {
 }
 
 // ── Draggable ILO row (used in the unlinked/course-level area) ──────────────
-function DraggableIloRow({ ilo }: { ilo: Ilo }) {
+function DraggableIloRow({
+  ilo,
+  onOpenComments,
+}: {
+  ilo: Ilo
+  onOpenComments?: () => void
+}) {
   const { send } = useApp()
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: ilo.id })
@@ -71,6 +77,7 @@ function DraggableIloRow({ ilo }: { ilo: Ilo }) {
           ilo={ilo}
           variant="course"
           onDelete={() => send({ type: "ilo:delete", id: ilo.id })}
+          onOpenComments={onOpenComments}
         />
       </div>
     </div>
@@ -156,15 +163,23 @@ export function IloPage({ courseId }: Props) {
 
   // Header inline-editing state
   const [editingField, setEditingField] = useState<
-    "code" | "name" | "coordinator" | "start" | "end" | null
+    "code" | "name" | "coordinator" | "start" | "end" | "type" | "owner" | null
   >(null)
   const [editValue, setEditValue] = useState("")
 
   // Current ILO dialog
   const [cloDialogOpen, setCloDialogOpen] = useState(false)
 
-  // Comments dialog
+  // Comments panel
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [commentsFocusIloId, setCommentsFocusIloId] = useState<number | null>(
+    null
+  )
+
+  function openComments(iloId?: number) {
+    setCommentsFocusIloId(iloId ?? null)
+    setCommentsOpen(true)
+  }
 
   // DnD active item
   const [activeIloId, setActiveIloId] = useState<number | null>(null)
@@ -173,7 +188,7 @@ export function IloPage({ courseId }: Props) {
   if (!course) return null
 
   function handleStartEdit(
-    field: "code" | "name" | "coordinator" | "start" | "end",
+    field: "code" | "name" | "coordinator" | "start" | "end" | "type" | "owner",
     value: string
   ) {
     setEditingField(field)
@@ -195,6 +210,9 @@ export function IloPage({ courseId }: Props) {
       start:
         editingField === "start" ? editValue.trim() || null : course!.start,
       end: editingField === "end" ? editValue.trim() || null : course!.end,
+      courseType: editingField === "type" ? editValue.trim() : course!.type,
+      owner:
+        editingField === "owner" ? editValue.trim() || null : course!.owner,
     })
     setEditingField(null)
   }
@@ -209,6 +227,8 @@ export function IloPage({ courseId }: Props) {
       coordinator: course!.coordinator,
       start: course!.start,
       end: course!.end,
+      courseType: course!.type,
+      owner: course!.owner,
     })
   }
 
@@ -233,14 +253,17 @@ export function IloPage({ courseId }: Props) {
         {/* Comments button */}
         {(() => {
           const count = state.comments.filter(
-            (c) => c.context === "course" && c.contextId === courseId
+            (c) =>
+              c.context === "course" &&
+              c.contextId === courseId &&
+              c.status !== "done"
           ).length
           return (
             <Button
               variant="ghost"
               size="sm"
               className="gap-1.5 text-muted-foreground hover:text-foreground"
-              onClick={() => setCommentsOpen(true)}
+              onClick={() => openComments()}
             >
               <MessageSquare className="size-4" />
               {count > 0 && <span className="text-xs">{count}</span>}
@@ -439,6 +462,62 @@ export function IloPage({ courseId }: Props) {
                 </span>
               )}
             </div>
+
+            {/* Type */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="shrink-0 font-medium">Type:</span>
+              {editingField === "type" ? (
+                <Input
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="h-6 w-32 border-0 px-1 text-xs focus-visible:ring-1"
+                  autoFocus
+                  placeholder="e.g. elective"
+                  onBlur={handleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave()
+                    if (e.key === "Escape") setEditingField(null)
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  onClick={() => handleStartEdit("type", course.type || "")}
+                >
+                  {course.type || <span className="italic opacity-50">—</span>}
+                </span>
+              )}
+            </div>
+
+            {/* Owner */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="shrink-0 font-medium">Owner:</span>
+              {editingField === "owner" ? (
+                <Input
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="h-6 w-40 border-0 px-1 text-xs focus-visible:ring-1"
+                  autoFocus
+                  placeholder="department or faculty"
+                  onBlur={handleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSave()
+                    if (e.key === "Escape") setEditingField(null)
+                  }}
+                />
+              ) : (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  onClick={() => handleStartEdit("owner", course.owner || "")}
+                >
+                  {course.owner || <span className="italic opacity-50">—</span>}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -461,7 +540,11 @@ export function IloPage({ courseId }: Props) {
             <CourseLevelDropZone isEmpty={unlinkedIlos.length === 0}>
               <div className="py-1">
                 {unlinkedIlos.map((ilo) => (
-                  <DraggableIloRow key={ilo.id} ilo={ilo} />
+                  <DraggableIloRow
+                    key={ilo.id}
+                    ilo={ilo}
+                    onOpenComments={() => openComments(ilo.id)}
+                  />
                 ))}
               </div>
             </CourseLevelDropZone>
@@ -478,6 +561,7 @@ export function IloPage({ courseId }: Props) {
                   onDelete={() =>
                     send({ type: "current_ilo:delete", id: currentIlo.id })
                   }
+                  onOpenComments={(iloId) => openComments(iloId)}
                 />
               ))}
             </div>
@@ -517,11 +601,12 @@ export function IloPage({ courseId }: Props) {
           setCloDialogOpen(false)
         }}
       />
-      <CommentsDialog
+      <CommentsPanel
         open={commentsOpen}
-        onOpenChange={setCommentsOpen}
+        onClose={() => setCommentsOpen(false)}
         context="course"
         contextId={courseId}
+        focusIloId={commentsFocusIloId}
       />
     </div>
   )
