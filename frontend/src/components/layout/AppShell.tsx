@@ -38,6 +38,26 @@ import { randomColor } from "@/lib/colorPalette"
 import { YamlActions } from "@/components/YamlActions"
 import { BulkImportCoursesDialog } from "@/components/BulkImportCoursesDialog"
 import { ProjectSettingsDialog } from "@/components/ProjectSettingsDialog"
+import type { Course } from "@/lib/types"
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function parsePeriod(s: string | null): [number, number] {
+  if (!s) return [Infinity, Infinity]
+  const parts = s.split("-").map(Number)
+  const y = isNaN(parts[0]) ? Infinity : (parts[0] ?? Infinity)
+  const b = parts[1] === undefined || isNaN(parts[1]) ? Infinity : parts[1]
+  return [y, b]
+}
+
+function blockRange(c: Course): string | null {
+  if (!c.start) return null
+  const [, sb] = parsePeriod(c.start)
+  if (!c.end) return String(sb)
+  const [, eb] = parsePeriod(c.end)
+  if (sb === Infinity) return null
+  return eb === Infinity || sb === eb ? String(sb) : `${sb}/${eb}`
+}
 
 export type Page =
   | { type: "trajectory"; id: number }
@@ -83,26 +103,27 @@ export function AppShell({
       ),
     [state.trajectories]
   )
-  const courses = useMemo(() => {
-    function parsePeriod(s: string | null): [number, number] {
-      if (!s) return [Infinity, Infinity]
-      const [y, b] = s.split("-").map(Number)
-      return [y ?? 0, b ?? 0]
-    }
-    return [...state.courses].sort((a, b) => {
-      const [ay, ab] = parsePeriod(a.start)
-      const [by, bb] = parsePeriod(b.start)
-      if (ay !== by) return ay - by
-      if (ab !== bb) return ab - bb
-      return a.code.localeCompare(b.code, undefined, { numeric: true })
-    })
-  }, [state.courses])
+  const courses = useMemo(
+    () =>
+      [...state.courses].sort((a, b) => {
+        const [ay, ab] = parsePeriod(a.start)
+        const [by, bb] = parsePeriod(b.start)
+        if (ay !== by) return ay - by
+        if (ab !== bb) return ab - bb
+        const [, ae] = parsePeriod(a.end)
+        const [, be] = parsePeriod(b.end)
+        if (ae !== be) return ae - be
+        return a.code.localeCompare(b.code, undefined, { numeric: true })
+      }),
+    [state.courses]
+  )
 
   const [courseSearch, setCourseSearch] = useState("")
   const courseIndexMap = useMemo(
     () => new Map(courses.map((c, i) => [c.id, i])),
     [courses]
   )
+
   const filteredCourses = useMemo(() => {
     const q = courseSearch.trim().toLowerCase()
     if (!q) return courses
@@ -111,6 +132,16 @@ export function AppShell({
         c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
     )
   }, [courses, courseSearch])
+
+  const coursesByYear = useMemo(() => {
+    const groups = new Map<number, Course[]>()
+    for (const c of filteredCourses) {
+      const [y] = parsePeriod(c.start)
+      if (!groups.has(y)) groups.set(y, [])
+      groups.get(y)!.push(c)
+    }
+    return [...groups.entries()].sort((a, b) => a[0] - b[0])
+  }, [filteredCourses])
 
   function handleNavigate(page: Page) {
     onNavigate(page)
@@ -515,65 +546,76 @@ export function AppShell({
                     {courseSearch.trim() ? "No matches" : "No courses yet"}
                   </p>
                 )}
-                {filteredCourses.map((c) => {
-                  const isActive =
-                    currentPage?.type === "course" && currentPage.id === c.id
-                  const btnClass = cn(
-                    "flex w-full items-center rounded-md transition-colors",
-                    collapsed
-                      ? "justify-center py-2"
-                      : "gap-2 px-2 py-1.5 text-left text-xs",
-                    isActive
-                      ? "bg-black font-medium text-white"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  )
-                  const badge = (
-                    <OrderBadge
-                      label={String((courseIndexMap.get(c.id) ?? 0) + 1)}
-                      color={c.color}
-                      shape="square"
-                    />
-                  )
-                  if (collapsed) {
-                    return (
-                      <Tooltip key={c.id}>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() =>
-                              handleNavigate({ type: "course", id: c.id })
-                            }
-                            className={btnClass}
-                          >
-                            {badge}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          {c.name || c.code}
-                          {c.start ? ` (${c.start})` : ""}
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  }
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() =>
-                        handleNavigate({ type: "course", id: c.id })
+                {coursesByYear.map(([year, yearCourses]) => (
+                  <div key={year}>
+                    {!collapsed && (
+                      <p className="mt-2 mb-0.5 px-2 text-[10px] font-semibold tracking-wider text-muted-foreground/60 uppercase select-none">
+                        {year === Infinity ? "—" : `Year ${year}`}
+                      </p>
+                    )}
+                    {yearCourses.map((c) => {
+                      const isActive =
+                        currentPage?.type === "course" &&
+                        currentPage.id === c.id
+                      const btnClass = cn(
+                        "flex w-full items-center rounded-md transition-colors",
+                        collapsed
+                          ? "justify-center py-2"
+                          : "gap-2 px-2 py-1.5 text-left text-xs",
+                        isActive
+                          ? "bg-black font-medium text-white"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )
+                      const badge = (
+                        <OrderBadge
+                          label={String((courseIndexMap.get(c.id) ?? 0) + 1)}
+                          color={c.color}
+                          shape="square"
+                        />
+                      )
+                      const range = blockRange(c)
+                      if (collapsed) {
+                        return (
+                          <Tooltip key={c.id}>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() =>
+                                  handleNavigate({ type: "course", id: c.id })
+                                }
+                                className={btnClass}
+                              >
+                                {badge}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              {c.name || c.code}
+                              {range ? ` (${range})` : ""}
+                            </TooltipContent>
+                          </Tooltip>
+                        )
                       }
-                      className={btnClass}
-                    >
-                      {badge}
-                      {c.start && (
-                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70">
-                          {c.start}
-                        </span>
-                      )}
-                      <span className="min-w-0 truncate">
-                        {c.name || c.code}
-                      </span>
-                    </button>
-                  )
-                })}
+                      return (
+                        <button
+                          key={c.id}
+                          onClick={() =>
+                            handleNavigate({ type: "course", id: c.id })
+                          }
+                          className={btnClass}
+                        >
+                          {badge}
+                          {range && (
+                            <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70">
+                              {range}
+                            </span>
+                          )}
+                          <span className="min-w-0 truncate">
+                            {c.name || c.code}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           </nav>

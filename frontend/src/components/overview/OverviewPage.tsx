@@ -146,9 +146,10 @@ function FilterButton({
           <>
             {options.map((opt) => {
               const on = selected.has(opt)
+              const isMissing = opt === ""
               return (
                 <button
-                  key={opt}
+                  key={isMissing ? "__missing__" : opt}
                   className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent"
                   onClick={() => {
                     const next = new Set(selected)
@@ -166,7 +167,13 @@ function FilterButton({
                   >
                     {on && <Check className="size-2.5" />}
                   </div>
-                  <span className="truncate">{opt}</span>
+                  {isMissing ? (
+                    <span className="truncate text-muted-foreground italic">
+                      Missing
+                    </span>
+                  ) : (
+                    <span className="truncate">{opt}</span>
+                  )}
                 </button>
               )
             })}
@@ -347,20 +354,21 @@ export function OverviewPage() {
   }
 
   // ── Filter options ──────────────────────────────────────────────────────────
-  const uniqueTypes = useMemo(
-    () =>
-      [...new Set(state.courses.map((c) => c.type).filter(Boolean))].sort(
-        (a, b) => a.localeCompare(b, undefined, { numeric: true })
-      ),
-    [state.courses]
-  )
-  const uniqueOwners = useMemo(
-    () =>
-      [
-        ...new Set(state.courses.map((c) => c.owner ?? "").filter(Boolean)),
-      ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
-    [state.courses]
-  )
+  const uniqueTypes = useMemo(() => {
+    const nonEmpty = [
+      ...new Set(state.courses.map((c) => c.type).filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    const hasMissing = state.courses.some((c) => !c.type)
+    return hasMissing ? [...nonEmpty, ""] : nonEmpty
+  }, [state.courses])
+
+  const uniqueOwners = useMemo(() => {
+    const nonEmpty = [
+      ...new Set(state.courses.map((c) => c.owner ?? "").filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    const hasMissing = state.courses.some((c) => !c.owner)
+    return hasMissing ? [...nonEmpty, ""] : nonEmpty
+  }, [state.courses])
 
   // ── Sorted courses ───────────────────────────────────────────────────────────
   const sortedCourses = useMemo(() => {
