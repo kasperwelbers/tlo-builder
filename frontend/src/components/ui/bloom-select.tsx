@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { BLOOM_LEVELS, BLOOM_CATEGORIES } from "@/lib/bloomLevels"
 import { useHelp } from "@/context/HelpContext"
+import { useReadOnly } from "@/context/AppContext"
 import { bloomBadgeClass } from "@/lib/bloomColors"
 import { cn } from "@/lib/utils"
 
@@ -21,6 +22,26 @@ export function BloomSelect({ value, onValueChange, placeholder = "—", fullLab
   const { openHelp } = useHelp()
   const selected = BLOOM_LEVELS.find(l => l.code === value)
   const label = fullLabel ? selected?.code + ' - ' + selected?.name   : selected?.code
+  const readOnly = useReadOnly()
+
+  const badgeClass = cn(
+    `${fullLabel ? "px-3 py-2" : "size-8"}`,
+    "flex shrink-0 items-center justify-center rounded-full border text-xs font-semibold ring-offset-background transition-colors",
+  )
+
+  if (readOnly) {
+    return (
+      <span
+        title={selected?.name}
+        className={cn(
+          badgeClass,
+          selected ? bloomBadgeClass(selected.code) : "border-input bg-background text-muted-foreground"
+        )}
+      >
+        {selected ? label : placeholder}
+      </span>
+    )
+  }
 
   return (
     <DropdownMenu>
@@ -28,8 +49,7 @@ export function BloomSelect({ value, onValueChange, placeholder = "—", fullLab
         <button
           type="button"
           className={cn(
-            `${fullLabel ? "px-3 py-2" : "size-8"}`,
-            "flex shrink-0 items-center justify-center rounded-full border text-xs font-semibold ring-offset-background transition-colors",
+            badgeClass,
             "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
             "disabled:cursor-not-allowed disabled:opacity-50",
             selected

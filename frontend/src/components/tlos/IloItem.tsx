@@ -40,7 +40,7 @@ export function IloItem({
   variant = "trajectory",
   onOpenComments,
 }: IloItemProps) {
-  const { state, send } = useApp()
+  const { state, send, readOnly } = useApp()
   const { navigateTo } = useNav()
   const [editingField, setEditingField] = useState<"description" | null>(null)
   const [editValue, setEditValue] = useState("")
@@ -68,6 +68,7 @@ export function IloItem({
   )
 
   function handleStartEdit(value: string) {
+    if (readOnly) return
     setEditingField("description")
     setEditValue(value)
   }
@@ -123,19 +124,23 @@ export function IloItem({
             />
           ) : (
             <div
-              role="button"
-              tabIndex={0}
-              className="line-clamp-2 cursor-pointer rounded px-1 py-0.5 text-xs font-medium hover:bg-muted"
+              role={readOnly ? undefined : "button"}
+              tabIndex={readOnly ? undefined : 0}
+              className={cn(
+                "line-clamp-2 rounded px-1 py-0.5 text-xs font-medium",
+                !readOnly && "cursor-pointer hover:bg-muted"
+              )}
               onClick={() => handleStartEdit(ilo.description || "")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleStartEdit(ilo.description || "")
               }}
             >
-              {ilo.description || (
-                <span className="font-normal italic opacity-50">
-                  The student can…
-                </span>
-              )}
+              {ilo.description ||
+                (!readOnly && (
+                  <span className="font-normal italic opacity-50">
+                    The student can…
+                  </span>
+                ))}
             </div>
           )}
         </div>
@@ -143,33 +148,37 @@ export function IloItem({
         {/* Right side: delete (hover) | badges | link */}
         <div className="flex shrink-0 items-center gap-1.5">
           {/* Delete (hover only) */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete this ILO and remove all its
-                  mappings.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {!readOnly && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0 text-destructive opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete ILO?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this ILO and remove all its
+                    mappings.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
 
           {/* Move button — trajectory only */}
-          {variant === "trajectory" && (
+          {variant === "trajectory" && !readOnly && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -186,19 +195,21 @@ export function IloItem({
           )}
 
           {/* Comment button */}
-          <button
-            className={cn(
-              "flex items-center gap-0.5 rounded px-1 py-0.5 text-muted-foreground transition-colors hover:bg-muted",
-              iloCommentCount === 0 && "opacity-0 group-hover:opacity-100"
-            )}
-            onClick={() => onOpenComments?.()}
-            title="Comments"
-          >
-            <MessageSquare className="size-3" />
-            {iloCommentCount > 0 && (
-              <span className="text-xs leading-none">{iloCommentCount}</span>
-            )}
-          </button>
+          {!readOnly && (
+            <button
+              className={cn(
+                "flex items-center gap-0.5 rounded px-1 py-0.5 text-muted-foreground transition-colors hover:bg-muted",
+                iloCommentCount === 0 && "opacity-0 group-hover:opacity-100"
+              )}
+              onClick={() => onOpenComments?.()}
+              title="Comments"
+            >
+              <MessageSquare className="size-3" />
+              {iloCommentCount > 0 && (
+                <span className="text-xs leading-none">{iloCommentCount}</span>
+              )}
+            </button>
+          )}
           {/* Badge: TLO (circle) on course page, course (square) on trajectory page */}
           {variant === "course"
             ? (() => {
@@ -277,7 +288,7 @@ export function IloItem({
               })}
 
           {/* Link button — workspace only */}
-          {variant === "trajectory" && (
+          {variant === "trajectory" && !readOnly && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

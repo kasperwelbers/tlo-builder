@@ -81,9 +81,9 @@ function DraggableIlo({
   ilo: Ilo
   onOpenComments?: () => void
 }) {
-  const { send } = useApp()
+  const { send, readOnly } = useApp()
   const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: ilo.id })
+    useDraggable({ id: ilo.id, disabled: readOnly })
   const style = transform
     ? { transform: CSS.Translate.toString(transform) }
     : undefined
@@ -94,15 +94,17 @@ function DraggableIlo({
       style={style}
       className={cn("flex items-center", isDragging && "opacity-40")}
     >
-      <button
-        {...listeners}
-        {...attributes}
-        className="shrink-0 cursor-grab px-1 py-1.5 text-muted-foreground/40 transition-colors hover:text-muted-foreground"
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="size-4" />
-      </button>
+      {!readOnly && (
+        <button
+          {...listeners}
+          {...attributes}
+          className="shrink-0 cursor-grab px-1 py-1.5 text-muted-foreground/40 transition-colors hover:text-muted-foreground"
+          tabIndex={-1}
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="size-4" />
+        </button>
+      )}
       <div className="min-w-0 flex-1">
         <IloItem
           ilo={ilo}
@@ -121,8 +123,11 @@ export function IloSection({
   onDelete,
   onOpenComments,
 }: Props) {
-  const { setNodeRef, isOver } = useDroppable({ id: currentIlo.id })
-  const { send, state } = useApp()
+  const { send, readOnly } = useApp()
+  const { setNodeRef, isOver } = useDroppable({
+    id: currentIlo.id,
+    disabled: readOnly,
+  })
 
   const [collapsed, setCollapsed] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
@@ -183,9 +188,10 @@ export function IloSection({
 
           {/* Description - read-only, left side */}
           <p className="line-clamp-2 min-w-0 flex-1 text-xs leading-snug font-medium">
-            {currentIlo.description || (
-              <span className="italic opacity-40">The student can…</span>
-            )}
+            {currentIlo.description ||
+              (!readOnly && (
+                <span className="italic opacity-40">The student can…</span>
+              ))}
           </p>
 
           {/* Bloom badge + edit button - right side */}
@@ -200,13 +206,15 @@ export function IloSection({
                 {currentIlo.bloomLevel}
               </span>
             )}
-            <button
-              onClick={openEdit}
-              className="rounded p-1 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/40 hover:!text-muted-foreground"
-              title="Edit course objective"
-            >
-              <Pencil className="size-3" />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={openEdit}
+                className="rounded p-1 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground/40 hover:!text-muted-foreground"
+                title="Edit course objective"
+              >
+                <Pencil className="size-3" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -240,7 +248,7 @@ export function IloSection({
         ))}
 
       {/* Action buttons */}
-      {!collapsed && (
+      {!collapsed && !readOnly && (
         <div className="flex flex-wrap gap-2 px-3 pt-1 pb-3">
           {/* Existing ILO — opens the link dialog */}
           <Button

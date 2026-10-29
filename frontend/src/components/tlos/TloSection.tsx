@@ -47,7 +47,7 @@ export function TloSection({
   onDelete,
   onOpenComments,
 }: TloSectionProps) {
-  const { send, state } = useApp()
+  const { send, state, readOnly } = useApp()
   const tloCommentCount = state.comments.filter(
     (c) =>
       c.context === "trajectory" &&
@@ -72,6 +72,7 @@ export function TloSection({
   const [editValue, setEditValue] = useState("")
 
   function handleStartEdit(field: "name" | "description", value: string) {
+    if (readOnly) return
     setEditingField(field)
     setEditValue(value)
   }
@@ -150,9 +151,12 @@ export function TloSection({
               />
             ) : (
               <span
-                role="button"
-                tabIndex={0}
-                className="cursor-pointer rounded px-1 text-base font-semibold hover:bg-black/5"
+                role={readOnly ? undefined : "button"}
+                tabIndex={readOnly ? undefined : 0}
+                className={cn(
+                  "rounded px-1 text-base font-semibold",
+                  !readOnly && "cursor-pointer hover:bg-black/5"
+                )}
                 onClick={() => handleStartEdit("name", tlo.name)}
               >
                 {tlo.name}
@@ -168,58 +172,75 @@ export function TloSection({
           </div>
 
           {/* EQ link */}
-          <button
-            className={cn(
-              "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-black/5",
-              linkedEq
-                ? "text-foreground/70"
-                : "text-muted-foreground opacity-0 group-hover:opacity-100"
-            )}
-            onClick={() => setEqLinkOpen(true)}
-            title={
-              linkedEq ? `EQ: ${linkedEq.name}` : "Link to Exit Qualification"
-            }
-          >
-            <GraduationCap className="size-3.5 shrink-0" />
-          </button>
-
-          <button
-            className={cn(
-              "flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 text-muted-foreground transition-colors hover:bg-black/5",
-              tloCommentCount === 0 && "opacity-0 group-hover:opacity-100"
-            )}
-            onClick={() => onOpenComments?.({ tloId: tlo.id })}
-            title="Comments"
-          >
-            <MessageSquare className="size-3.5" />
-            {tloCommentCount > 0 && (
-              <span className="text-xs">{tloCommentCount}</span>
-            )}
-          </button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0 text-destructive opacity-0 group-hover:opacity-100 hover:bg-black/5"
+          {readOnly ? (
+            linkedEq && (
+              <span
+                className="flex shrink-0 items-center gap-1 px-1.5 py-0.5 text-xs text-foreground/70"
+                title={`EQ: ${linkedEq.name}`}
               >
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete TLO?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete <strong>{tlo.name}</strong> and
-                  all its ILO mappings.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                <GraduationCap className="size-3.5 shrink-0" />
+              </span>
+            )
+          ) : (
+            <>
+              <button
+                className={cn(
+                  "flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs transition-colors hover:bg-black/5",
+                  linkedEq
+                    ? "text-foreground/70"
+                    : "text-muted-foreground opacity-0 group-hover:opacity-100"
+                )}
+                onClick={() => setEqLinkOpen(true)}
+                title={
+                  linkedEq
+                    ? `EQ: ${linkedEq.name}`
+                    : "Link to Exit Qualification"
+                }
+              >
+                <GraduationCap className="size-3.5 shrink-0" />
+              </button>
+
+              <button
+                className={cn(
+                  "flex shrink-0 items-center gap-0.5 rounded px-1 py-0.5 text-muted-foreground transition-colors hover:bg-black/5",
+                  tloCommentCount === 0 && "opacity-0 group-hover:opacity-100"
+                )}
+                onClick={() => onOpenComments?.({ tloId: tlo.id })}
+                title="Comments"
+              >
+                <MessageSquare className="size-3.5" />
+                {tloCommentCount > 0 && (
+                  <span className="text-xs">{tloCommentCount}</span>
+                )}
+              </button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 shrink-0 text-destructive opacity-0 group-hover:opacity-100 hover:bg-black/5"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete TLO?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete <strong>{tlo.name}</strong>{" "}
+                      and all its ILO mappings.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onDelete}>
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
         </div>
 
         {/* Row 2: editable description */}
@@ -238,16 +259,20 @@ export function TloSection({
             />
           ) : (
             <div
-              role="button"
-              tabIndex={0}
-              className="cursor-pointer rounded px-1 text-sm text-black/70 hover:bg-black/5"
+              role={readOnly ? undefined : "button"}
+              tabIndex={readOnly ? undefined : 0}
+              className={cn(
+                "rounded px-1 text-sm text-black/70",
+                !readOnly && "cursor-pointer hover:bg-black/5"
+              )}
               onClick={() =>
                 handleStartEdit("description", tlo.description || "")
               }
             >
-              {tlo.description || (
-                <span className="italic opacity-40">The student can…</span>
-              )}
+              {tlo.description ||
+                (!readOnly && (
+                  <span className="italic opacity-40">The student can…</span>
+                ))}
             </div>
           )}
         </div>
@@ -275,32 +300,34 @@ export function TloSection({
           )}
 
           {/* Buttons */}
-          <div className="flex flex-wrap gap-2 px-3 pt-1 pb-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={() =>
-                send({
-                  type: "ilo:create",
-                  tloId: tlo.id,
-                  description: "",
-                  bloomLevel: null,
-                })
-              }
-            >
-              <Plus className="mr-1 size-3.5" /> New ILO
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={() => setCreateFromCloOpen(true)}
-            >
-              <Plus className="mr-1 size-3.5" /> New ILO from current course
-              objectives
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="flex flex-wrap gap-2 px-3 pt-1 pb-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={() =>
+                  send({
+                    type: "ilo:create",
+                    tloId: tlo.id,
+                    description: "",
+                    bloomLevel: null,
+                  })
+                }
+              >
+                <Plus className="mr-1 size-3.5" /> New ILO
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={() => setCreateFromCloOpen(true)}
+              >
+                <Plus className="mr-1 size-3.5" /> New ILO from current course
+                objectives
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

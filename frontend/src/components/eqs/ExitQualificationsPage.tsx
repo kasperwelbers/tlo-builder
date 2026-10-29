@@ -40,13 +40,14 @@ function EqCard({
   onLinkTlo,
   onNavigate,
 }: EqCardProps) {
-  const { send } = useApp()
+  const { send, readOnly } = useApp()
   const [editingField, setEditingField] = useState<
     "name" | "description" | null
   >(null)
   const [editValue, setEditValue] = useState("")
 
   function startEdit(field: "name" | "description", value: string) {
+    if (readOnly) return
     setEditingField(field)
     setEditValue(value)
   }
@@ -92,8 +93,11 @@ function EqCard({
             />
           ) : (
             <span
-              role="button"
-              className="cursor-pointer rounded px-1 text-base font-semibold hover:bg-black/5"
+              role={readOnly ? undefined : "button"}
+              className={cn(
+                "rounded px-1 text-base font-semibold",
+                !readOnly && "cursor-pointer hover:bg-black/5"
+              )}
               onClick={() => startEdit("name", eq.name)}
             >
               {eq.name || <span className="italic opacity-40">Untitled</span>}
@@ -122,45 +126,51 @@ function EqCard({
             />
           ) : (
             <div
-              role="button"
-              className="cursor-pointer rounded px-1 text-sm text-muted-foreground hover:bg-black/5"
+              role={readOnly ? undefined : "button"}
+              className={cn(
+                "rounded px-1 text-sm text-muted-foreground",
+                !readOnly && "cursor-pointer hover:bg-black/5"
+              )}
               onClick={() => startEdit("description", eq.description)}
             >
-              {eq.description || (
-                <span className="italic opacity-40">Add a description…</span>
-              )}
+              {eq.description ||
+                (!readOnly && (
+                  <span className="italic opacity-40">Add a description…</span>
+                ))}
             </div>
           )}
         </div>
 
         {/* Delete button */}
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 shrink-0 text-destructive opacity-0 group-hover:opacity-100"
-            >
-              <Trash2 size={16} />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete "{eq.name}"?</AlertDialogTitle>
-              <AlertDialogDescription>
-                All linked TLOs will be unlinked. This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => send({ type: "eq:delete", id: eq.id })}
+        {!readOnly && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0 text-destructive opacity-0 group-hover:opacity-100"
               >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <Trash2 size={16} />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete "{eq.name}"?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  All linked TLOs will be unlinked. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => send({ type: "eq:delete", id: eq.id })}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* Linked TLOs */}
@@ -194,16 +204,18 @@ function EqCard({
       )}
 
       {/* Footer */}
-      <div className="border-t px-4 py-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs text-muted-foreground"
-          onClick={onLinkTlo}
-        >
-          <Plus className="mr-1 size-3" /> Link TLO
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className="border-t px-4 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-muted-foreground"
+            onClick={onLinkTlo}
+          >
+            <Plus className="mr-1 size-3" /> Link TLO
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -213,7 +225,7 @@ function EqCard({
 // ---------------------------------------------------------------------------
 
 export function ExitQualificationsPage() {
-  const { state, send } = useApp()
+  const { state, send, readOnly } = useApp()
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState("")
   const [newDesc, setNewDesc] = useState("")
@@ -255,13 +267,15 @@ export function ExitQualificationsPage() {
         <h2 className="pl-1 font-semibold text-foreground/60">
           Exit Qualifications
         </h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setCreating((v) => !v)}
-        >
-          <Plus className="mr-1 size-3.5" /> New EQ
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCreating((v) => !v)}
+          >
+            <Plus className="mr-1 size-3.5" /> New EQ
+          </Button>
+        )}
       </div>
 
       {/* Create form */}

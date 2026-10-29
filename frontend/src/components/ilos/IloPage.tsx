@@ -50,9 +50,9 @@ function DraggableIloRow({
   ilo: Ilo
   onOpenComments?: () => void
 }) {
-  const { send } = useApp()
+  const { send, readOnly } = useApp()
   const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: ilo.id })
+    useDraggable({ id: ilo.id, disabled: readOnly })
   const style = transform
     ? { transform: CSS.Translate.toString(transform) }
     : undefined
@@ -63,15 +63,17 @@ function DraggableIloRow({
       style={style}
       className={cn("flex items-center", isDragging && "opacity-40")}
     >
-      <button
-        {...listeners}
-        {...attributes}
-        className="shrink-0 cursor-grab px-1 py-1.5 text-muted-foreground/40 transition-colors hover:text-muted-foreground"
-        tabIndex={-1}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="size-4" />
-      </button>
+      {!readOnly && (
+        <button
+          {...listeners}
+          {...attributes}
+          className="shrink-0 cursor-grab px-1 py-1.5 text-muted-foreground/40 transition-colors hover:text-muted-foreground"
+          tabIndex={-1}
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="size-4" />
+        </button>
+      )}
       <div className="min-w-0 flex-1">
         <IloItem
           ilo={ilo}
@@ -92,7 +94,11 @@ function CourseLevelDropZone({
   children: React.ReactNode
   isEmpty: boolean
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id: "course-level" })
+  const { readOnly } = useApp()
+  const { isOver, setNodeRef } = useDroppable({
+    id: "course-level",
+    disabled: readOnly,
+  })
   return (
     <div
       ref={setNodeRef}
@@ -119,7 +125,8 @@ function CourseLevelDropZone({
 
 // ── Main page ───────────────────────────────────────────────────────────────
 export function IloPage({ courseId }: Props) {
-  const { state, send } = useApp()
+  const { state, send, readOnly } = useApp()
+  const editableProps = readOnly ? {} : { role: "button", tabIndex: 0 }
   const { openHelp } = useHelp()
 
   const course = state.courses.find((c) => c.id === courseId)
@@ -209,6 +216,7 @@ export function IloPage({ courseId }: Props) {
       | "ec",
     value: string
   ) {
+    if (readOnly) return
     setEditingField(field)
     setEditValue(value)
   }
@@ -288,6 +296,7 @@ export function IloPage({ courseId }: Props) {
               c.contextId === courseId &&
               c.status !== "done"
           ).length
+          if (readOnly) return null
           return (
             <Button
               variant="ghost"
@@ -310,47 +319,49 @@ export function IloPage({ courseId }: Props) {
           <HelpCircle className="size-4" />
         </Button>
         {/* Action row */}
-        <div className="flex items-center justify-end gap-2">
-          <ColorPicker
-            value={course.color}
-            onChange={handleColorChange}
-            shape="square"
-          />
+        {!readOnly && (
+          <div className="flex items-center justify-end gap-2">
+            <ColorPicker
+              value={course.color}
+              onChange={handleColorChange}
+              shape="square"
+            />
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Delete course "{course.code}"?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will delete all {courseCurrentIlos.length} Current ILO
-                  {courseCurrentIlos.length !== 1 ? "s" : ""} in this course and
-                  their mappings.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() =>
-                    send({ type: "course:delete", courseId: course.id })
-                  }
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive"
                 >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Delete course "{course.code}"?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete all {courseCurrentIlos.length} Current ILO
+                    {courseCurrentIlos.length !== 1 ? "s" : ""} in this course
+                    and their mappings.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() =>
+                      send({ type: "course:delete", courseId: course.id })
+                    }
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
       {/* ── Course header ─────────────────────────────────────────────────── */}
       <div className="pt-1">
@@ -370,14 +381,17 @@ export function IloPage({ courseId }: Props) {
           />
         ) : (
           <p
-            role="button"
-            tabIndex={0}
-            className="cursor-pointer rounded px-1 text-2xl font-bold hover:bg-muted/50"
+            {...editableProps}
+            className={cn(
+              "rounded px-1 text-2xl font-bold",
+              !readOnly && "cursor-pointer hover:bg-muted/50"
+            )}
             onClick={() => handleStartEdit("name", course.name || "")}
           >
-            {course.name || (
-              <span className="italic opacity-50">Full course name</span>
-            )}
+            {course.name ||
+              (!readOnly && (
+                <span className="italic opacity-50">Full course name</span>
+              ))}
           </p>
         )}
 
@@ -396,9 +410,11 @@ export function IloPage({ courseId }: Props) {
             />
           ) : (
             <p
-              role="button"
-              tabIndex={0}
-              className="cursor-pointer rounded px-1 text-sm text-muted-foreground hover:bg-muted/50"
+              {...editableProps}
+              className={cn(
+                "rounded px-1 text-sm text-muted-foreground",
+                !readOnly && "cursor-pointer hover:bg-muted/50"
+              )}
               onClick={() => handleStartEdit("code", course.code)}
             >
               {course.code}
@@ -424,9 +440,11 @@ export function IloPage({ courseId }: Props) {
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  {...editableProps}
+                  className={cn(
+                    "rounded px-1",
+                    !readOnly && "cursor-pointer hover:bg-muted/50"
+                  )}
                   onClick={() =>
                     handleStartEdit("coordinator", course.coordinator || "")
                   }
@@ -456,9 +474,11 @@ export function IloPage({ courseId }: Props) {
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  {...editableProps}
+                  className={cn(
+                    "rounded px-1",
+                    !readOnly && "cursor-pointer hover:bg-muted/50"
+                  )}
                   onClick={() => handleStartEdit("start", course.start || "")}
                 >
                   {course.start || <span className="italic opacity-50">—</span>}
@@ -484,9 +504,11 @@ export function IloPage({ courseId }: Props) {
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  {...editableProps}
+                  className={cn(
+                    "rounded px-1",
+                    !readOnly && "cursor-pointer hover:bg-muted/50"
+                  )}
                   onClick={() => handleStartEdit("end", course.end || "")}
                 >
                   {course.end || <span className="italic opacity-50">—</span>}
@@ -512,9 +534,11 @@ export function IloPage({ courseId }: Props) {
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  {...editableProps}
+                  className={cn(
+                    "rounded px-1",
+                    !readOnly && "cursor-pointer hover:bg-muted/50"
+                  )}
                   onClick={() => handleStartEdit("type", course.type || "")}
                 >
                   {course.type || <span className="italic opacity-50">—</span>}
@@ -540,9 +564,11 @@ export function IloPage({ courseId }: Props) {
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  {...editableProps}
+                  className={cn(
+                    "rounded px-1",
+                    !readOnly && "cursor-pointer hover:bg-muted/50"
+                  )}
                   onClick={() => handleStartEdit("owner", course.owner || "")}
                 >
                   {course.owner || <span className="italic opacity-50">—</span>}
@@ -568,9 +594,11 @@ export function IloPage({ courseId }: Props) {
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  {...editableProps}
+                  className={cn(
+                    "rounded px-1",
+                    !readOnly && "cursor-pointer hover:bg-muted/50"
+                  )}
                   onClick={() =>
                     handleStartEdit(
                       "level",
@@ -605,9 +633,11 @@ export function IloPage({ courseId }: Props) {
                 />
               ) : (
                 <span
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer rounded px-1 hover:bg-muted/50"
+                  {...editableProps}
+                  className={cn(
+                    "rounded px-1",
+                    !readOnly && "cursor-pointer hover:bg-muted/50"
+                  )}
                   onClick={() =>
                     handleStartEdit(
                       "ec",
@@ -673,15 +703,17 @@ export function IloPage({ courseId }: Props) {
           )}
 
           {/* Add Current ILO */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full border-dashed text-muted-foreground hover:text-foreground"
-            onClick={() => setCloDialogOpen(true)}
-          >
-            <Plus className="mr-1 size-4" />
-            Add Current ILO
-          </Button>
+          {!readOnly && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-dashed text-muted-foreground hover:text-foreground"
+              onClick={() => setCloDialogOpen(true)}
+            >
+              <Plus className="mr-1 size-4" />
+              Add Current ILO
+            </Button>
+          )}
         </div>
 
         {/* Drag overlay */}

@@ -38,6 +38,7 @@ import { randomColor } from "@/lib/colorPalette"
 import { YamlActions } from "@/components/YamlActions"
 import { BulkImportCoursesDialog } from "@/components/BulkImportCoursesDialog"
 import { ProjectSettingsDialog } from "@/components/ProjectSettingsDialog"
+import { PublicLinkWelcome } from "@/components/layout/PublicLinkWelcome"
 import type { Course } from "@/lib/types"
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,10 +87,29 @@ export function AppShell({
   onGoHome,
   onRename,
 }: AppShellProps) {
-  const { state, send } = useApp()
+  const { state, send, readOnly } = useApp()
   const [collapsed, setCollapsed] = useState(false)
   const { openHelp } = useHelp()
   const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // Public-link visitors see a welcome message once per browser
+  const welcomeKey = `public-link-welcome-seen:${projectId}`
+  const [welcomeOpen, setWelcomeOpen] = useState(() => {
+    if (!readOnly) return false
+    try {
+      return !localStorage.getItem(welcomeKey)
+    } catch {
+      return true
+    }
+  })
+  function handleWelcomeOpenChange(open: boolean) {
+    setWelcomeOpen(open)
+    if (!open) {
+      try {
+        localStorage.setItem(welcomeKey, "1")
+      } catch {}
+    }
+  }
 
   function handleNavigateOverview() {
     onNavigate({ type: "overview" })
@@ -260,6 +280,15 @@ export function AppShell({
                 <span className="flex-1 truncate text-sm font-semibold">
                   {projectName || "…"}
                 </span>
+                {readOnly && (
+                  <button
+                    onClick={() => setWelcomeOpen(true)}
+                    className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    title="You're viewing a read-only public link"
+                  >
+                    View only
+                  </button>
+                )}
                 <span
                   className={cn(
                     "size-2 shrink-0 rounded-full",
@@ -295,32 +324,36 @@ export function AppShell({
                   : "items-center px-2 py-1.5"
               )}
             >
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={onGoHome}
-                    className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <ArrowLeft className="size-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side={collapsed ? "right" : "bottom"}>
-                  All projects
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => setSettingsOpen(true)}
-                    className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <Settings className="size-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side={collapsed ? "right" : "bottom"}>
-                  Project settings
-                </TooltipContent>
-              </Tooltip>
+              {!readOnly && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={onGoHome}
+                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <ArrowLeft className="size-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side={collapsed ? "right" : "bottom"}>
+                    All projects
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {!readOnly && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setSettingsOpen(true)}
+                      className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <Settings className="size-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side={collapsed ? "right" : "bottom"}>
+                    Project settings
+                  </TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -427,15 +460,17 @@ export function AppShell({
                   <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                     Trajectories
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-5 text-muted-foreground hover:text-foreground"
-                    onClick={openAddTrajectory}
-                    title="Add trajectory"
-                  >
-                    <Plus className="size-3" />
-                  </Button>
+                  {!readOnly && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-5 text-muted-foreground hover:text-foreground"
+                      onClick={openAddTrajectory}
+                      title="Add trajectory"
+                    >
+                      <Plus className="size-3" />
+                    </Button>
+                  )}
                 </div>
               )}
               <div className="space-y-0.5">
@@ -510,26 +545,28 @@ export function AppShell({
                   <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                     Courses
                   </span>
-                  <div className="flex items-center gap-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-5 text-muted-foreground hover:text-foreground"
-                      onClick={() => setBulkImportOpen(true)}
-                      title="Bulk import courses"
-                    >
-                      <Sheet className="size-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-5 text-muted-foreground hover:text-foreground"
-                      onClick={openAddCourse}
-                      title="Add course"
-                    >
-                      <Plus className="size-3" />
-                    </Button>
-                  </div>
+                  {!readOnly && (
+                    <div className="flex items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-5 text-muted-foreground hover:text-foreground"
+                        onClick={() => setBulkImportOpen(true)}
+                        title="Bulk import courses"
+                      >
+                        <Sheet className="size-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-5 text-muted-foreground hover:text-foreground"
+                        onClick={openAddCourse}
+                        title="Add course"
+                      >
+                        <Plus className="size-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
               {!collapsed && (
@@ -622,7 +659,11 @@ export function AppShell({
 
           {/* Bottom: Import / Export */}
           <div className={cn("shrink-0 border-t", collapsed ? "p-1.5" : "p-3")}>
-            <YamlActions collapsed={collapsed} projectName={projectName} />
+            <YamlActions
+              collapsed={collapsed}
+              projectName={projectName}
+              exportOnly={readOnly}
+            />
           </div>
         </aside>
 
@@ -690,19 +731,31 @@ export function AppShell({
           </DialogContent>
         </Dialog>
 
+        {readOnly && (
+          <PublicLinkWelcome
+            open={welcomeOpen}
+            onOpenChange={handleWelcomeOpenChange}
+            projectName={projectName}
+            onShowOverview={handleNavigateOverview}
+            onShowHelp={() => openHelp("overview")}
+          />
+        )}
+
         {/* Bulk Import Courses Dialog */}
         <BulkImportCoursesDialog
           open={bulkImportOpen}
           onOpenChange={setBulkImportOpen}
         />
 
-        <ProjectSettingsDialog
-          projectId={projectId}
-          projectName={projectName}
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          onRename={onRename}
-        />
+        {!readOnly && (
+          <ProjectSettingsDialog
+            projectId={projectId}
+            projectName={projectName}
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            onRename={onRename}
+          />
+        )}
 
         {/* Add Course Dialog */}
         <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>

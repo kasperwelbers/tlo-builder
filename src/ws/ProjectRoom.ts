@@ -2,8 +2,8 @@ import { DurableObject } from "cloudflare:workers"
 import { type Env } from "../types"
 import { getDb } from "../db"
 import { eq } from "drizzle-orm"
+import { withRetry } from "../db/retry"
 import {
-  projects,
   trajectories,
   tlos,
   ilos,
@@ -17,9 +17,24 @@ import {
 } from "../db/schema"
 import { handleMessage, type SyncTable } from "./handlers"
 
+const READ_TAG = "mode:read"
+
 export class ProjectRoom extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
+
+    // Internal: share link was regenerated or turned off
+    if (url.pathname === "/close-readonly") {
+      for (const ws of this.ctx.getWebSockets(READ_TAG)) {
+        // Tell the client explicitly too: the close frame isn't always delivered
+        // to sockets that never sent a message (seen in local workerd).
+        try {
+          ws.send(JSON.stringify({ type: "sync:revoked" }))
+          ws.close(4003, "Share link revoked")
+        } catch {}
+      }
+      return new Response(null, { status: 204 })
+    }
 
     // WebSocket upgrade
     const upgradeHeader = request.headers.get("Upgrade")
@@ -32,11 +47,30 @@ export class ProjectRoom extends DurableObject<Env> {
 
     // Tag the socket with the projectId for per-project filtering
     const userId = request.headers.get("X-User-Id") ?? ""
-    this.ctx.acceptWebSocket(server, [projectId, userId])
+    const readOnly = request.headers.get("X-Access-Mode") === "read"
+    this.ctx.acceptWebSocket(server, [
+      projectId,
+      userId,
+      readOnly ? READ_TAG : "mode:edit",
+    ])
 
-    // Send full state immediately on connect
-    const state = await this.getFullState(projectId)
-    server.send(JSON.stringify({ type: "sync:all", data: state }))
+    // Send full state immediately on connect. If the database is unavailable,
+    // report it and close so the client reconnects, rather than failing the upgrade.
+    try {
+      const state = await this.getFullState(projectId, readOnly)
+      server.send(JSON.stringify({ type: "sync:all", data: state }))
+    } catch (error: any) {
+      console.error("[ProjectRoom] Failed to load state:", error)
+      try {
+        server.send(
+          JSON.stringify({
+            type: "sync:error",
+            message: "Failed to load project",
+          })
+        )
+        server.close(1011, "Failed to load project")
+      } catch {}
+    }
 
     return new Response(null, { status: 101, webSocket: client })
   }
@@ -49,6 +83,13 @@ export class ProjectRoom extends DurableObject<Env> {
     const projectId = tags[0]
     const userId = tags[1] ?? ""
     if (!projectId) return
+
+    if (tags.includes(READ_TAG)) {
+      try {
+        ws.send(JSON.stringify({ type: "sync:error", message: "read-only" }))
+      } catch {}
+      return
+    }
 
     try {
       const data = JSON.parse(
@@ -99,9 +140,12 @@ export class ProjectRoom extends DurableObject<Env> {
     table: SyncTable
   ): Promise<void> {
     const db = getDb(this.env.DB)
-    const data = await this.getTableData(db, projectId, table)
+    const data = await withRetry(() => this.getTableData(db, projectId, table))
     const message = JSON.stringify({ type: `sync:${table}`, data })
     for (const ws of this.ctx.getWebSockets(projectId)) {
+      // Comments contain emails and are hidden from share-link viewers
+      if (table === "comments" && this.ctx.getTags(ws).includes(READ_TAG))
+        continue
       try {
         ws.send(message)
       } catch {}
@@ -158,14 +202,12 @@ export class ProjectRoom extends DurableObject<Env> {
     }
   }
 
-  private async getFullState(projectId: string) {
-    const db = getDb(this.env.DB)
+  private getFullState(projectId: string, readOnly: boolean) {
+    return withRetry(() => this.loadFullState(projectId, readOnly))
+  }
 
-    // Ensure the project row exists
-    await db
-      .insert(projects)
-      .values({ id: projectId, name: "Untitled Project" })
-      .onConflictDoNothing()
+  private async loadFullState(projectId: string, readOnly: boolean) {
+    const db = getDb(this.env.DB)
 
     const [
       allTrajectories,
@@ -199,7 +241,9 @@ export class ProjectRoom extends DurableObject<Env> {
         .select()
         .from(iloCurrentIloMappings)
         .where(eq(iloCurrentIloMappings.projectId, projectId)),
-      db.select().from(comments).where(eq(comments.projectId, projectId)),
+      readOnly
+        ? Promise.resolve([])
+        : db.select().from(comments).where(eq(comments.projectId, projectId)),
       db
         .select()
         .from(exitQualifications)

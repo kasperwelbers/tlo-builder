@@ -18,6 +18,7 @@ import { TloSection } from "./TloSection"
 import { TloFormDialog } from "@/components/tlos/TloFormDialog"
 import { CommentsPanel } from "@/components/CommentsPanel"
 import { useApp } from "@/context/AppContext"
+import { cn } from "@/lib/utils"
 import { useHelp } from "@/context/HelpContext"
 import type { Tlo } from "@/lib/types"
 import { bloomSortKey } from "@/lib/bloomLevels"
@@ -27,7 +28,7 @@ interface Props {
 }
 
 export function TrajectoryPage({ trajectoryId }: Props) {
-  const { state, send } = useApp()
+  const { state, send, readOnly } = useApp()
 
   const trajectory = state.trajectories.find((t) => t.id === trajectoryId)
   const tlosForTrajectory = useMemo(
@@ -77,6 +78,7 @@ export function TrajectoryPage({ trajectoryId }: Props) {
   if (!trajectory) return null
 
   function handleStartEdit(field: "name" | "description", value: string) {
+    if (readOnly) return
     setEditingField(field)
     setEditValue(value)
   }
@@ -116,6 +118,7 @@ export function TrajectoryPage({ trajectoryId }: Props) {
               c.contextId === trajectory.id &&
               c.status !== "done"
           ).length
+          if (readOnly) return null
           return (
             <Button
               variant="ghost"
@@ -139,44 +142,49 @@ export function TrajectoryPage({ trajectoryId }: Props) {
         </Button>
 
         {/* Action row */}
-        <div className="flex items-center justify-end gap-2">
-          <ColorPicker value={trajectory.color} onChange={handleColorChange} />
+        {!readOnly && (
+          <div className="flex items-center justify-end gap-2">
+            <ColorPicker
+              value={trajectory.color}
+              onChange={handleColorChange}
+            />
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete trajectory?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will delete <strong>{trajectory.name}</strong> and all{" "}
-                  {tlosForTrajectory.length} TLO
-                  {tlosForTrajectory.length !== 1 ? "s" : ""} inside it.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() =>
-                    send({
-                      type: "trajectory:delete",
-                      trajectoryId: trajectory.id,
-                    })
-                  }
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive"
                 >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete trajectory?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will delete <strong>{trajectory.name}</strong> and all{" "}
+                    {tlosForTrajectory.length} TLO
+                    {tlosForTrajectory.length !== 1 ? "s" : ""} inside it.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() =>
+                      send({
+                        type: "trajectory:delete",
+                        trajectoryId: trajectory.id,
+                      })
+                    }
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
       {/* Trajectory header */}
       <div className="space-y-6 pt-1">
@@ -196,9 +204,12 @@ export function TrajectoryPage({ trajectoryId }: Props) {
             />
           ) : (
             <h1
-              role="button"
-              tabIndex={0}
-              className="cursor-pointer rounded px-1 text-2xl font-bold hover:bg-muted/50"
+              role={readOnly ? undefined : "button"}
+              tabIndex={readOnly ? undefined : 0}
+              className={cn(
+                "rounded px-1 text-2xl font-bold",
+                !readOnly && "cursor-pointer hover:bg-muted/50"
+              )}
               onClick={() => handleStartEdit("name", trajectory.name)}
             >
               {trajectory.name}
@@ -219,18 +230,22 @@ export function TrajectoryPage({ trajectoryId }: Props) {
             />
           ) : (
             <p
-              role="button"
-              tabIndex={0}
-              className="mt-1 cursor-pointer rounded px-1 text-sm text-muted-foreground hover:bg-muted/50"
+              role={readOnly ? undefined : "button"}
+              tabIndex={readOnly ? undefined : 0}
+              className={cn(
+                "mt-1 rounded px-1 text-sm text-muted-foreground",
+                !readOnly && "cursor-pointer hover:bg-muted/50"
+              )}
               onClick={() =>
                 handleStartEdit("description", trajectory.description || "")
               }
             >
-              {trajectory.description || (
-                <span className="italic opacity-50">
-                  A brief description of this trajectory
-                </span>
-              )}
+              {trajectory.description ||
+                (!readOnly && (
+                  <span className="italic opacity-50">
+                    A brief description of this trajectory
+                  </span>
+                ))}
             </p>
           )}
         </div>
@@ -243,16 +258,18 @@ export function TrajectoryPage({ trajectoryId }: Props) {
             <p className="text-muted-foreground">
               No TLOs yet in this trajectory.
             </p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setEditTlo(null)
-                setAddTloOpen(true)
-              }}
-            >
-              <Plus className="mr-1.5 size-4" /> Add your first TLO
-            </Button>
+            {!readOnly && (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setEditTlo(null)
+                  setAddTloOpen(true)
+                }}
+              >
+                <Plus className="mr-1.5 size-4" /> Add your first TLO
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -275,17 +292,19 @@ export function TrajectoryPage({ trajectoryId }: Props) {
                 onOpenComments={(opts) => openComments(opts.tloId, opts.iloId)}
               />
             ))}
-            <div className="flex justify-end">
-              <Button
-                onClick={() => {
-                  setEditTlo(null)
-                  setAddTloOpen(true)
-                }}
-                size="sm"
-              >
-                <Plus className="mr-1.5 size-4" /> Add TLO
-              </Button>
-            </div>
+            {!readOnly && (
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    setEditTlo(null)
+                    setAddTloOpen(true)
+                  }}
+                  size="sm"
+                >
+                  <Plus className="mr-1.5 size-4" /> Add TLO
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>

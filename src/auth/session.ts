@@ -1,4 +1,5 @@
 import type { Env } from '../types'
+import { withRetry } from '../db/retry'
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
@@ -16,7 +17,7 @@ export async function getSession(
   sessionId: string,
   env: Env,
 ): Promise<{ userId: string; email: string } | null> {
-  const row = await env.DB
+  const row = await withRetry(() => env.DB
     .prepare(`
       SELECT s.user_id, u.email, s.expires_at
       FROM sessions s
@@ -24,7 +25,7 @@ export async function getSession(
       WHERE s.id = ?
     `)
     .bind(sessionId)
-    .first<{ user_id: string; email: string; expires_at: number }>()
+    .first<{ user_id: string; email: string; expires_at: number }>())
 
   if (!row) return null
   if (row.expires_at < Date.now()) {

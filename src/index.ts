@@ -3,11 +3,17 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie"
 import { sendOtp, verifyOtp } from "./auth/otp"
 import { createSession, getSession, deleteSession } from "./auth/session"
 import { isServerAdmin, canAccessProject } from "./auth/permissions"
+import { withRetry } from "./db/retry"
 import type { Env } from "./types"
 
 export { ProjectRoom } from "./ws/ProjectRoom"
 
 const app = new Hono<{ Bindings: Env }>()
+
+app.onError((err, c) => {
+  console.error(`[${c.req.method} ${c.req.path}]`, err)
+  return c.json({ error: "Internal Server Error" }, 500)
+})
 
 // ---------------------------------------------------------------------------
 // Auth helpers
@@ -17,6 +23,36 @@ async function requireSession(c: any) {
   const sessionId = getCookie(c, "session_id")
   if (!sessionId) return null
   return getSession(sessionId, c.env)
+}
+
+function generateShareToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32))
+  let bin = ""
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+}
+
+// Tell the project's Durable Object to drop all read-only (share link) sockets
+async function closeReadOnlySockets(env: Env, projectId: string) {
+  const room = env.PROJECT_ROOM.get(env.PROJECT_ROOM.idFromName(projectId))
+  await room.fetch("https://do/close-readonly", { method: "POST" })
+}
+
+async function createTicket(
+  env: Env,
+  userId: string,
+  projectId: string,
+  mode: "edit" | "read"
+) {
+  const ticket = crypto.randomUUID()
+  const now = Date.now()
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM ws_tickets WHERE expires_at < ?").bind(now),
+    env.DB.prepare(
+      "INSERT INTO ws_tickets (ticket, user_id, expires_at, project_id, mode) VALUES (?, ?, ?, ?, ?)"
+    ).bind(ticket, userId, now + 30_000, projectId, mode),
+  ])
+  return ticket
 }
 
 const SESSION_COOKIE = {
@@ -118,23 +154,50 @@ app.get("/api/me", async (c) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/ws-ticket — one-time WebSocket ticket (30 s)
+// Either a session + { projectId } (edit mode) or { shareToken } (read mode).
 // ---------------------------------------------------------------------------
 app.post("/api/ws-ticket", async (c) => {
+  const body = await c.req.json<{ projectId?: string; shareToken?: string }>()
+
+  if (body.shareToken) {
+    const project = await withRetry(() =>
+      c.env.DB.prepare("SELECT id FROM projects WHERE share_token = ?")
+        .bind(body.shareToken)
+        .first<{ id: string }>()
+    )
+    if (!project) return c.json({ error: "Invalid link" }, 404)
+    const ticket = await createTicket(c.env, "", project.id, "read")
+    return c.json({ ticket, projectId: project.id })
+  }
+
   const user = await requireSession(c)
   if (!user) return c.json({ error: "Unauthorized" }, 401)
-  const body = await c.req.json<{ projectId?: string }>()
   const projectId = body.projectId
   if (!projectId) return c.json({ error: "projectId required" }, 400)
   const allowed = await canAccessProject(user.userId, projectId, c.env)
   if (!allowed) return c.json({ error: "Forbidden" }, 403)
-  const ticket = crypto.randomUUID()
-  const expiresAt = Date.now() + 30_000
-  await c.env.DB.prepare(
-    "INSERT INTO ws_tickets (ticket, user_id, expires_at) VALUES (?, ?, ?)"
+  const exists = await withRetry(() =>
+    c.env.DB.prepare("SELECT 1 FROM projects WHERE id = ?")
+      .bind(projectId)
+      .first()
   )
-    .bind(ticket, user.userId, expiresAt)
-    .run()
-  return c.json({ ticket })
+  if (!exists) return c.json({ error: "Project not found" }, 404)
+  const ticket = await createTicket(c.env, user.userId, projectId, "edit")
+  return c.json({ ticket, projectId })
+})
+
+// ---------------------------------------------------------------------------
+// GET /api/share/:token — resolve a public share link (no login required)
+// ---------------------------------------------------------------------------
+app.get("/api/share/:token", async (c) => {
+  const token = c.req.param("token")
+  const row = await withRetry(() =>
+    c.env.DB.prepare("SELECT id, name FROM projects WHERE share_token = ?")
+      .bind(token)
+      .first<{ id: string; name: string }>()
+  )
+  if (!row) return c.json({ error: "Not found" }, 404)
+  return c.json({ projectId: row.id, name: row.name })
 })
 
 // ---------------------------------------------------------------------------
@@ -176,6 +239,54 @@ app.patch("/api/projects/:id", async (c) => {
   await c.env.DB.prepare("UPDATE projects SET name = ? WHERE id = ?")
     .bind(name, projectId)
     .run()
+  return c.json({ ok: true })
+})
+
+// ---------------------------------------------------------------------------
+// GET/POST/DELETE /api/projects/:id/share — manage the public read-only link
+// ---------------------------------------------------------------------------
+app.get("/api/projects/:id/share", async (c) => {
+  const user = await requireSession(c)
+  if (!user) return c.json({ error: "Unauthorized" }, 401)
+  const projectId = c.req.param("id")
+  if (!(await canAccessProject(user.userId, projectId, c.env)))
+    return c.json({ error: "Forbidden" }, 403)
+  const row = await withRetry(() =>
+    c.env.DB.prepare("SELECT share_token FROM projects WHERE id = ?")
+      .bind(projectId)
+      .first<{ share_token: string | null }>()
+  )
+  if (!row) return c.json({ error: "Not found" }, 404)
+  return c.json({ token: row.share_token })
+})
+
+app.post("/api/projects/:id/share", async (c) => {
+  const user = await requireSession(c)
+  if (!user) return c.json({ error: "Unauthorized" }, 401)
+  const projectId = c.req.param("id")
+  if (!(await canAccessProject(user.userId, projectId, c.env)))
+    return c.json({ error: "Forbidden" }, 403)
+  const token = generateShareToken()
+  const res = await c.env.DB.prepare(
+    "UPDATE projects SET share_token = ? WHERE id = ?"
+  )
+    .bind(token, projectId)
+    .run()
+  if (!res.meta.changes) return c.json({ error: "Not found" }, 404)
+  await closeReadOnlySockets(c.env, projectId)
+  return c.json({ token })
+})
+
+app.delete("/api/projects/:id/share", async (c) => {
+  const user = await requireSession(c)
+  if (!user) return c.json({ error: "Unauthorized" }, 401)
+  const projectId = c.req.param("id")
+  if (!(await canAccessProject(user.userId, projectId, c.env)))
+    return c.json({ error: "Forbidden" }, 403)
+  await c.env.DB.prepare("UPDATE projects SET share_token = NULL WHERE id = ?")
+    .bind(projectId)
+    .run()
+  await closeReadOnlySockets(c.env, projectId)
   return c.json({ ok: true })
 })
 
@@ -360,22 +471,22 @@ app.get("/ws/:projectId", async (c) => {
   const ticket = c.req.query("ticket")
   if (!ticket) return c.text("Missing ticket", 401)
 
+  // Delete and read in one statement (one-time use)
   const row = await c.env.DB.prepare(
-    "SELECT user_id, expires_at FROM ws_tickets WHERE ticket = ?"
+    "DELETE FROM ws_tickets WHERE ticket = ? RETURNING user_id, expires_at, project_id, mode"
   )
     .bind(ticket)
-    .first<{ user_id: string; expires_at: number }>()
-
-  // Always delete (one-time use)
-  await c.env.DB.prepare("DELETE FROM ws_tickets WHERE ticket = ?")
-    .bind(ticket)
-    .run()
-
-  if (!row || row.expires_at < Date.now()) {
-    return c.text("Invalid or expired ticket", 401)
-  }
+    .first<{
+      user_id: string
+      expires_at: number
+      project_id: string
+      mode: string
+    }>()
 
   const projectId = c.req.param("projectId")
+  if (!row || row.expires_at < Date.now() || row.project_id !== projectId) {
+    return c.text("Invalid or expired ticket", 401)
+  }
   const id = c.env.PROJECT_ROOM.idFromName(projectId)
   const room = c.env.PROJECT_ROOM.get(id)
 
@@ -384,6 +495,7 @@ app.get("/ws/:projectId", async (c) => {
     headers: new Headers({
       ...Object.fromEntries(c.req.raw.headers.entries()),
       "X-User-Id": row.user_id,
+      "X-Access-Mode": row.mode === "read" ? "read" : "edit",
     }),
   })
   return room.fetch(forwarded)

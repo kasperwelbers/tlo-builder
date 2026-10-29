@@ -23,11 +23,14 @@ import {
 interface YamlActionsProps {
   collapsed?: boolean
   projectName: string
+  /** Hide Import (used for read-only share links) */
+  exportOnly?: boolean
 }
 
 export function YamlActions({
   collapsed = false,
   projectName,
+  exportOnly = false,
 }: YamlActionsProps) {
   const { state, send } = useApp()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -116,19 +119,21 @@ export function YamlActions({
       >
         {collapsed ? (
           <>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  onClick={handleImportClick}
-                >
-                  <Upload className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">Import YAML</TooltipContent>
-            </Tooltip>
+            {!exportOnly && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    onClick={handleImportClick}
+                  >
+                    <Upload className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Import YAML</TooltipContent>
+              </Tooltip>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -145,15 +150,17 @@ export function YamlActions({
           </>
         ) : (
           <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 flex-1 gap-1 text-xs"
-              onClick={handleImportClick}
-            >
-              <Upload className="size-3" />
-              Import
-            </Button>
+            {!exportOnly && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 flex-1 gap-1 text-xs"
+                onClick={handleImportClick}
+              >
+                <Upload className="size-3" />
+                Import
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

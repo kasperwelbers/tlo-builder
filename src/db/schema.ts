@@ -13,6 +13,7 @@ export const projects = sqliteTable("projects", {
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
+  shareToken: text("share_token").unique("projects_share_token_idx"),
 })
 
 export const trajectories = sqliteTable(
@@ -226,6 +227,8 @@ export const wsTickets = sqliteTable("ws_tickets", {
   ticket: text("ticket").primaryKey(),
   userId: text("user_id").notNull(),
   expiresAt: integer("expires_at").notNull(),
+  projectId: text("project_id").notNull().default(""),
+  mode: text("mode").notNull().default("edit"),
 })
 
 export const userRoles = sqliteTable(
